@@ -68,9 +68,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -1146,11 +1148,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (ha != hb) return ha ? -1 : 1;
                 return String.valueOf(a.loadLabel(this)).compareToIgnoreCase(String.valueOf(b.loadLabel(this)));
             });
+            // An HDMI-CEC device on a port shares that port's row instead of getting its own (InputPorts).
+            Map<String, TvInputInfo> byId = new HashMap<>();
+            List<String> ids = new ArrayList<>(), parentIds = new ArrayList<>();
+            for (TvInputInfo info : inputs) {
+                byId.put(info.getId(), info);
+                ids.add(info.getId());
+                parentIds.add(info.getParentId());
+            }
+            Map<String, String> deviceByPort = InputPorts.deviceByPort(ids, parentIds);
             // Some TVs (Sony) report every HDMI port as connected whether or not anything is plugged in,
             // so drop the HDMI status then. A TV with every port really in use loses it too.
             int hdmiPorts = 0, hdmiConnected = 0;
             for (TvInputInfo info : inputs) {
-                if (!info.isPassthroughInput() || info.getType() != TvInputInfo.TYPE_HDMI) continue;
+                if (!info.isPassthroughInput() || info.getType() != TvInputInfo.TYPE_HDMI
+                        || deviceByPort.containsValue(info.getId())) continue;
                 hdmiPorts++;
                 if (tim.getInputState(info.getId()) == TvInputManager.INPUT_STATE_CONNECTED) hdmiConnected++;
             }
@@ -1166,12 +1178,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         tunerIsHw = hw;
                     }
                 }
-                if (!info.isPassthroughInput()) continue;
+                if (!info.isPassthroughInput() || deviceByPort.containsValue(info.getId())) continue;
                 CharSequence l = info.loadLabel(this);
                 String label = l == null ? info.getId() : l.toString();
                 boolean hdmi = info.getType() == TvInputInfo.TYPE_HDMI;
                 if (hdmi && !label.toUpperCase(Locale.ROOT).contains("HDMI")) label = "HDMI " + label;
-                final String id = info.getId();
+                String deviceId = deviceByPort.get(info.getId());
+                CharSequence device = deviceId == null ? null : byId.get(deviceId).loadLabel(this);
+                if (device != null && device.length() > 0) label += " · " + device;
+                final String id = deviceId == null ? info.getId() : deviceId;
                 int state = hdmi && hdmiStateBogus ? -1 : tim.getInputState(id);
                 if (!hdmi && rows.getChildCount() > 0 && !sawNonHdmi) addSeparator(rows);
                 if (!hdmi) sawNonHdmi = true;
