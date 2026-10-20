@@ -1,0 +1,9 @@
+{
+  "dock_apps": ["org.smarttube.stable", "com.netflix.ninja", "com.amazon.amazonvideo.livingroom", "com.apple.atve.sony.appletv", "com.disney.disneyplus",
+                "eu.siptv.video", "com.sony.dtv.smartmediaapp", "de.telekom.magentatv.tv"],
+  "hidden_apps": ["com.sony.dtv.tvx", "com.sony.dtv.recapp", "com.sony.dtv.timers", "com.vewd.core.integration.dia", "com.sony.dtv.osat.music"],
+  "live_tv_package": "",
+  "columns": 5,
+  "rows_below_dock": 1,
+  "reduced_motion": false
+}

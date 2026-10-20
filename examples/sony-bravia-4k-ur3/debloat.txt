@@ -1,0 +1,67 @@
+# Sony BRAVIA 4K UR3 (device BRAVIA_UR3, product BRAVIA_UR3_EU, MediaTek), Germany
+# Android 10 (Android TV, API 29), firmware BRAVIA_UR3_EU-user 10 QTG3.200305.006.S97 662301, 2.3 GB RAM
+#
+# Apply:   powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt
+# Undo:    powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt
+# Everything is DISABLED, not uninstalled. Comment out any line you want to keep.
+#
+# Launcher, layout, step-by-step log and the state before and after: README.md, LOG.md, state-*.txt
+# in this folder; install.ps1 builds and installs the launcher with theme/.
+# Same firmware build as the UR2 list. USB debugging alone opens port 5555, no pairing.
+# Stock launcher: com.google.android.tvlauncher. Only it and Settings' FallbackHome answer HOME;
+# setupwraith does not, and the saved Wi-Fi network belongs to android.uid.system.
+# Live TV / tuner app: com.sony.dtv.tvx (live_tv_package in the launcher's config.xml).
+# Keep the com.sony.dtv.tvinput.* services, com.sony.dtv.braviasync*, com.sony.dtv.tvapi,
+# com.sony.dtv.sonysystemservice and the Sony settings apps: they drive HDMI, the tuner, Bravia Sync
+# and the remote. Keep com.sony.dtv.hbbtvplayer for the red button on German channels.
+# Already disabled at the factory: com.sony.dtv.b2b.softap, com.sony.dtv.b2b.vendorprotocol,
+# com.youview.poa, screnmirroring.com (Sony's Screen mirroring app, so Miracast from Android phones
+# never worked here; AirPlay is a separate app).
+# Kept by choice: voice assistant, Chromecast, AirPlay + HomeKit, firmware updates, DLNA (which plays
+# through com.sony.dtv.smartmediaapp and com.sony.dtv.osat.music, so those stay too), Netflix,
+# Prime Video, Apple TV, Sony's network remote start (wakes the TV for AirPlay and casting).
+
+# tracking / telemetry
+tv.samba.ssm                                   # Samba TV fingerprints what's on screen
+com.qterics.da.product                         # Qterics device agent
+com.sony.dtv.da.service                        # Sony device agent / remote support
+com.sonyericsson.idd.agent                     # Sony IDD usage-data agent
+com.sony.dtv.usercontext                       # viewing context for recommendations
+com.sony.dtv.sonybugreportsys                  # bug-report uploader
+com.google.android.feedback
+com.google.android.tv.bugreportsender
+com.google.android.partnersetup                # RLZ install-attribution provider
+
+# ads / promos / recommendation feeds
+com.sony.dtv.promos                            # My BRAVIA promos
+com.sony.dtv.sonyselect                        # Sony Select app store/promo tile
+com.sony.dtv.bivlinfo                          # BIVL content service list (feeds Discover)
+com.google.android.tvrecommendations           # recommendation rows for the stock launcher
+android.autoinstalls.config.sony.bravia        # Play auto-install of partner apps
+com.sony.dtv.tvlaunchercustomizer              # Sony tweaks to the stock home rows
+
+# shop demo / help / UK-only
+com.sony.dtv.demosupport
+com.sony.dtv.demosystemsupport
+com.sony.dtv.multiscreendemo                   # shop demo
+com.sony.dtv.smarthelp                         # Help guide
+com.sony.dtv.customersupport                   # Help tile
+com.sony.dtv.youview                           # YouView (UK only) upgrade stub
+
+# preloaded apps, disabled by choice
+com.google.android.play.games
+com.google.android.videos                      # came back enabled once on its own elsewhere; check after Play updates
+com.google.android.backdrop                    # Ambient mode screensaver (the screensaver was off)
+com.sony.dtv.livingfit                         # Living Decor screensaver
+com.google.android.youtube.tv                  # official YouTube; SmartTube is used instead (the remote's YouTube button then does nothing)
+com.google.android.youtube.tvmusic             # YouTube Music
+
+# Miracast / Wi-Fi Direct mirroring, unused (Sony's Screen mirroring app was already off)
+com.mediatek.wfd
+com.sony.dtv.networkapp.wifidirect
+
+# smart-home control and Sony notices, disabled by choice
+com.sony.dtv.seeds.iot                         # Sony IoT: Works with Alexa setup, FCM push, runs at boot
+com.sony.dtv.seeds.auth                        # its account authenticator
+com.sony.dtv.smarthomesettings                 # "Works with Alexa" settings: Amazon login, runs at boot
+com.sony.dtv.notificationcenter                # "BRAVIA notifications" inbox
