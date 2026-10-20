@@ -19,6 +19,12 @@
          set "fill_dock": false. -->
     <bool name="fill_dock">true</bool>
 
+    <!-- One app shown as a wide card above the dock, with its banner and its name in large type, in place of
+         the focused dock app's name. It leaves the grid, Home opens on it, and Up from the dock reaches it.
+         Needs the room the top shelf has: 5 or more columns with one row under the dock, or 4 with none.
+         Empty: no card. A theme can set "featured_app". -->
+    <string name="featured_app" translatable="false"></string>
+
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->
     <string-array name="hidden_apps">
         <item>com.mediatek.wwtv.tvcenter</item>

@@ -1,0 +1,156 @@
+# Sony BRAVIA 4K UR3: what was done, and how to undo or change it
+
+Done on 2026-10-20 over network ADB (TV at `192.168.178.26`, Ethernet). Every command below is
+PowerShell, run from the repository folder `C:\Users\taula\projects\tloshi\cleanyourtv`.
+
+Every step in order, with its result: [`LOG.md`](LOG.md). Every package before and after:
+[`state-before.txt`](state-before.txt), [`state-after.txt`](state-after.txt).
+
+## What changed
+
+- **31 packages disabled**, never uninstalled: tracking (Samba TV, Sony/Qterics/IDD agents), ads and
+  promos (My BRAVIA, Sony Select, Google recommendation rows, partner auto-installs), the shop demo,
+  help tiles, Play Games, Play Movies, official YouTube, YouTube Music and the Alexa smart-home
+  services. The full list with reasons: [`debloat.txt`](debloat.txt).
+- **New home screen**: the CleanYourTV launcher (`com.gathin.tvhome`) is Home, and the stock launcher
+  (`com.google.android.tvlauncher`) is disabled. SmartTube sits on a wide card at the top and Home
+  opens on it; Netflix, Prime Video, Apple TV, Disney+ and MagentaTV are the dock; Smart IPTV, Media
+  Player (USB), Screen mirroring, Spotify and MX Player the row under it.
+- **Screen mirroring for a Samsung's Smart View is switched on**: Sony's Miracast receiver is enabled
+  and the Wi-Fi radio is on (the TV still uses Ethernet for its internet). The TV side was checked (it
+  advertises itself as "L Tv"); the first test from the phone is in [`LOG.md`](LOG.md). See "Share from
+  your Samsung phone" below.
+- **Speed round**: app caches cleared (storage went from 81% to 40% full), animations set to 0.5x, and
+  15 apps you had never opened uninstalled (KiKA, ARD, RTL+, DAZN, Steam Link, Downloader, BrowseHere,
+  AirScreen, OnStream, HiTV, ReVanced Manager, two microG copies, Kodi, one test build of yours).
+- **Kept on purpose**: voice search on the remote, Chromecast, AirPlay and Apple Home, firmware updates,
+  DLNA, Media Player (USB films), Netflix, Prime Video, Apple TV, MX Player and the other apps you use.
+
+No DNS was changed and no app data was cleared, apart from the caches.
+
+## Undo everything
+
+Both undo routes need **USB debugging switched on** on the TV first: Settings > Device Preferences >
+Developer options > USB debugging. Accept "Allow USB debugging?" on the TV if it asks.
+
+**Back to exactly how the TV was before** (every package, the stock home screen, the new launcher
+removed). This replays the full snapshot in `backup\2026-10-20-bravia-ur3-before\`, which only exists
+on this PC; keep a copy of that folder somewhere safe:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backup\2026-10-20-bravia-ur3-before\RESTORE.ps1 -DryRun
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backup\2026-10-20-bravia-ur3-before\RESTORE.ps1
+```
+
+The first command only lists what would change; the second does it and ends with "the TV matches the
+snapshot". If the TV got a new IP address, add `-TvHost <new ip>`. It also sets the animations back
+to normal speed. It does not bring back the 15 uninstalled apps (it lists them as gone): install the
+ones you want from the Play Store, or from the copies in `backup\apks\` while that folder exists:
+
+```powershell
+adb -s 192.168.178.26:5555 install-multiple (Get-ChildItem backup\apks\org.xbmc.kodi\*.apk).FullName
+```
+
+Kodi's old settings and add-ons are in `backup\kodi-data\`; after reinstalling Kodi, before opening
+it: `adb -s 192.168.178.26:5555 push backup\kodi-data\org.xbmc.kodi /sdcard/Android/data/`.
+
+Only the animation speed back to normal, nothing else:
+
+```powershell
+foreach ($key in 'window_animation_scale', 'transition_animation_scale', 'animator_duration_scale') { adb -s 192.168.178.26:5555 shell settings put global $key 1 }
+```
+
+**Undo only the debloat list** (second route, from the record in `C:\Users\taula\.cleanyourtv\`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt
+```
+
+## Re-enable one app
+
+**On the TV, no computer needed**: Settings (the pill at the top right) > Apps > See all apps > Show
+system apps > pick the app > Enable.
+
+**Over ADB**, with USB debugging on:
+
+```powershell
+adb connect 192.168.178.26:5555
+```
+
+```powershell
+adb -s 192.168.178.26:5555 shell pm enable com.google.android.youtube.tv
+```
+
+Feature you want back, and the packages to enable:
+
+| Feature | Packages |
+|---|---|
+| Official YouTube (the remote's YouTube button) | `com.google.android.youtube.tv` |
+| YouTube Music | `com.google.android.youtube.tvmusic` |
+| Alexa / smart-home control | `com.sony.dtv.seeds.iot`, `com.sony.dtv.seeds.auth`, `com.sony.dtv.smarthomesettings` |
+| BRAVIA notifications | `com.sony.dtv.notificationcenter` |
+| Ambient mode / Living Decor screensavers | `com.google.android.backdrop`, `com.sony.dtv.livingfit` |
+| Help guide | `com.sony.dtv.smarthelp`, `com.sony.dtv.customersupport` |
+| The stock home screen | `com.google.android.tvlauncher`, then hold OK on the Settings pill > Launcher settings > default home, and pick it in Android's Home picker (or run the full restore) |
+
+## Share from your Samsung phone
+
+1. On the TV, open the **Screen mirroring** tile (row 2). The TV shows "Device name: L Tv" and waits.
+2. On the phone, swipe down twice, tap **Smart View**, pick **L Tv**, and accept on the TV if asked.
+
+This is Miracast over Wi-Fi Direct, a direct link between phone and TV, so it needs the TV's Wi-Fi
+radio on even though the TV is on Ethernet; that radio being off is why the phone never found the TV
+before. If someone switches Wi-Fi off in the TV's settings, Smart View loses the TV again; switch it
+back on there, or `adb -s 192.168.178.26:5555 shell svc wifi enable`.
+
+For videos and photos in Google Photos, the **Cast** icon in the app sends them to the TV's built-in
+Chromecast instead, over the normal network, with no TV screen to open first.
+
+## Change the dock, the rows or the wallpaper
+
+The layout lives in [`theme\config.json`](theme/config.json). Edit it, then push it; no rebuild needed:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\theme
+```
+
+- **`featured_app`**: the app on the big card at the top (SmartTube). Another package name swaps it;
+  remove the line for no card.
+- **`dock_apps`**: the order of the first tiles. The first `columns` entries sit in the dock band (row 1),
+  the rest start row 2 in the same order; every other app follows alphabetically. Package names of the
+  apps on the TV: `adb -s 192.168.178.26:5555 shell pm list packages -3` (apps you installed).
+- **`columns`**: tiles per row (4 to 7 is comfortable; tiles shrink from 5 up).
+- **`rows_below_dock`**: grid rows visible on Home under the dock (0 to 3).
+- **`hidden_apps`**: tiles never shown (the app stays installed). Recordings, Timers, Vewd and Sony
+  Music are hidden; delete a line to bring a tile back.
+- **Wallpaper**: put a dark 1920x1080 JPEG under about 300 KB into the `theme` folder as
+  `wallpaper.jpg`, add `"wallpaper": true` to `config.json`, and push the theme again. Remove the file
+  (or set `false`) and push to go back to black.
+
+Back to the launcher's built-in defaults: `tools\theme.ps1 -TvHost 192.168.178.26 -Reset`. On the TV,
+holding OK on the Settings pill opens Launcher settings (apps per row, animations).
+
+## Reinstall or update the launcher
+
+```powershell
+powershell -ExecutionPolicy Bypass -File examples\sony-bravia-4k-ur3\install.ps1
+```
+
+It builds the launcher (needs the JDK and Android SDK that are on this PC), installs it, keeps it as
+Home and pushes this theme.
+
+## Things worth knowing
+
+- **After a Sony firmware update**, an updated system app can come back enabled. Check with
+  `adb -s 192.168.178.26:5555 shell pm list packages -d` (35 lines: 31 from the list, 3 that Sony ships
+  disabled, and the stock launcher) and re-apply the list with
+  `powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt`.
+- **Inputs**: the pill lists HDMI 1 to 4 and AV; a device that announces itself over HDMI-CEC is named
+  in its port's row (PlayStation 5 · HDMI 1). The remote's Input button still opens Sony's own panel.
+- **No ad-blocking DNS** was set: Android's Private DNS has no fallback, so a resolver outage shows as
+  "No internet" although the connection is fine.
+- **Security**: switch USB debugging off when you are not changing anything. Network ADB on this TV
+  follows that switch (`persist.adb.tcp.port` is 5555), and port 5555 is unencrypted.

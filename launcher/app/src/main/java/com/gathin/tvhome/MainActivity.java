@@ -158,6 +158,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static int lastFocused = 0;
     /** App of the last focused tile, so focus follows it when the app list changes. */
     private static String lastFocusedKey;
+    /** Focus was last on the featured card rather than a tile; Home opens on the card. */
+    private static boolean featuredFocused = true;
+    /** One app as a wide card above the dock (config.xml featured_app), or null. */
+    private FeaturedCard featured;
+    /** The configured featured_app, empty for none, whether or not it is installed. */
+    private String featuredPackage = "";
     private float density;
     /** Module cards (res/values/config.xml, module_cards): discovered on resume, shown only after the owner's Show. */
     private boolean moduleCards;
@@ -252,6 +258,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Updates send REMOVED followed by ADDED; keep the tile until the new APK is ready.
             if (Intent.ACTION_PACKAGE_REMOVED.equals(intent.getAction())
                     && intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return;
+            if (featuredAvailabilityChanged()) {
+                recreate();
+                return;
+            }
             reloadApps(false);
             if (appLibrary != null) appLibrary.refresh();
         }
@@ -405,6 +415,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         fillDockLeavesSlots = !cfg.fillDock;
         adapter.setSavedOrder(Order.ranks(Order.load(Order.file(this)), dockApps));
         grid.setAdapter(adapter);
+        // Outside the grid, in the same clipping frame, so it scrolls and clips with the dock row.
+        // The card lines up with the dock band; a plain grid (dock_row false) has none, so it gets no card.
+        featuredPackage = dockRow ? cfg.featuredApp : "";
+        featured = FeaturedCard.create(this, (ViewGroup) grid.getParent(), featuredPackage);
+        if (featured != null) {
+            // Its card replaces its tile; while it is not installed it simply gets a tile when it arrives.
+            hiddenApps.add(featured.packageName());
+            adapter.hidePackage(featured.packageName());
+            setUpFeatured();
+        }
 
         // tvOS layout: push the dock row towards the bottom of the screen, leaving room for
         // rows_below_dock grid rows under it; the rest of the grid stays below until you press Down.
@@ -426,6 +446,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
             // No dock to push down: the grid starts at the top, with room for the first row's zoom and glass.
             if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
+            if (featured != null) {
+                // The space above the dock band is the card's; at its smallest it pushes the rows down.
+                want = Math.max(want, FeaturedCard.minSpacePx(density));
+                featured.setHeight(FeaturedCard.heightFor(want, density));
+            }
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
             }
@@ -438,12 +463,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                alignFeatured();
                 if (!glassShown) return;
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
                 glass.setTranslationY(glass.getTranslationY() - dy);
             }
         });
+
+        // A relayout moves the dock row without a scroll (Home start, reload, column change).
+        if (featured != null) grid.getViewTreeObserver().addOnGlobalLayoutListener(this::alignFeatured);
 
         // Liquid feel: soft springs on the highlight's position.
         springX = new SpringAnimation(glass, DynamicAnimation.TRANSLATION_X);
@@ -494,8 +523,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                // Back to the dock tile Up came from, not wherever the focus finder lands.
-                focusTile(lastFocused % COLUMNS);
+                // Down to the featured card, or back to the dock tile Up came from; never wherever the
+                // focus finder lands.
+                if (featured != null) featured.view.requestFocus();
+                else focusTile(lastFocused % COLUMNS);
                 return true;
             }
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnWifi;
@@ -519,7 +550,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Hide the glass when focus leaves the tiles.
         getWindow().getDecorView().getViewTreeObserver().addOnGlobalFocusChangeListener((oldF, newF) -> {
-            boolean onTile = newF != null && newF.getId() == R.id.card;
+            boolean onTile = newF != null && (newF.getId() == R.id.card || newF.getId() == R.id.featured);
             if (!onTile) hideGlass();
         });
 
@@ -562,6 +593,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
+        featuredFocused = featured != null;
         rebuildOnResume = true;
     }
 
@@ -579,7 +611,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         // A festival that started or ended while Home was in the background: rebuild with or without it.
-        if (festive != festival.active(LocalDate.now())) {
+        if (festive != festival.active(LocalDate.now()) || featuredAvailabilityChanged()) {
             recreate();
             return;
         }
@@ -683,6 +715,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.post(() -> {
             int pos = adapter.positionOf(returnKey);
             if (returnToLibrary || libraryFocusPending) focusLibrary();
+            else if (featured != null && featuredFocused) focusFeatured();
             else focusTile(pos >= 0 ? pos : returnSlot);
             tilesReady = true;
             showCardPrompt();
@@ -1045,6 +1078,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
+        featuredFocused = false;
         // Focus restored before the first layout (cold start): the tile has no size yet, and the glass
         // would be sized to 2*pad. Run again once the tile is laid out.
         if (card.getWidth() == 0) {
@@ -1058,46 +1092,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         r.set(0, 0, card.getWidth(), card.getHeight());
         root.offsetDescendantRectToMyCoords(card, r);
         float pad = 6f * density;        // matches GlassView's glow inset
-        float scale = adapter.focusScale();
-        float w = card.getWidth() * scale + 2 * pad;
-        float h = card.getHeight() * scale + 2 * pad;
-        float x = r.exactCenterX() - w / 2f;
-        float y = r.exactCenterY() - h / 2f - (advancedEffects ? 4f * density : 0f);
-
-        ViewGroup.LayoutParams lp = glass.getLayoutParams();
-        if (lp.width != (int) w || lp.height != (int) h || card.getWidth() != glassCardW) {
-            lp.width = (int) w;
-            lp.height = (int) h;
-            glass.setLayoutParams(lp);
-            // GlassView draws its slab inset by pad, i.e. exactly over the zoomed tile: same corners as the tile.
-            glass.setRadius(AppAdapter.cornerRadius(card.getWidth(), density) * scale);
-        }
-        glassCardW = card.getWidth();
-        glassTargetX = x;
-        glassTargetY = y;
+        moveGlass(r, adapter.focusScale(), AppAdapter.cornerRadius(card.getWidth(), density),
+                advancedEffects ? 4f * density : 0f);
         // Cinematic shelf: the highlight glows in the dock app's colour, plain white in the grid.
-        int accent = cinematic && !festive && position < COLUMNS ? adapter.ambientColorAt(position) : 0;
-        if (cinematic && !festive && accent != glassAccent) {
-            glassAccent = accent;
-            glass.setAccent(accent);
-        }
-        if (!glassShown) {
-            springX.cancel();
-            springY.cancel();
-            glass.setTranslationX(x);
-            glass.setTranslationY(y);
-            if (animations) glass.animate().alpha(1f).setDuration(reducedMotion ? 100 : 180).start();
-            else glass.setAlpha(1f);
-            glassShown = true;
-        } else if (!animations) {
-            springX.cancel();
-            springY.cancel();
-            glass.setTranslationX(x);
-            glass.setTranslationY(y);
-        } else {
-            springX.animateToFinalPosition(x);
-            springY.animateToFinalPosition(y - glassScrollShift);
-        }
+        setGlassAccent(cinematic && !festive && position < COLUMNS ? adapter.ambientColorAt(position) : 0);
         View item = (View) card.getParent();
         if (dockRow && position < COLUMNS) {
             // Dock: park it at the bottom of the screen and show the top shelf for this app.
@@ -1114,7 +1112,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             // A plain grid (dock_row false) has no dock to carry the glow, so it follows every tile there.
             if (dockRow) hideHero();
-            else showGlowOnly(position);
+            else showGlowOnly(adapter.ambientColorAt(position));
             // Scroll just enough so the whole glass (not only the tile) is visible.
             revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
             grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
@@ -1135,6 +1133,152 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!glassShown || card.getWidth() != glassCardW || glass.getWidth() != w || glass.getHeight() != h) {
             onTileFocused(pos, card);
         }
+    }
+
+    /**
+     * Springs the glass over a focused rect (root coordinates, unzoomed): grown by the focus zoom, raised
+     * by lift, with corners of the given radius.
+     */
+    private void moveGlass(Rect r, float scale, float radius, float lift) {
+        float pad = 6f * density;        // matches GlassView's glow inset
+        float w = r.width() * scale + 2 * pad;
+        float h = r.height() * scale + 2 * pad;
+        float x = r.exactCenterX() - w / 2f;
+        float y = r.exactCenterY() - h / 2f - lift;
+
+        ViewGroup.LayoutParams lp = glass.getLayoutParams();
+        if (lp.width != (int) w || lp.height != (int) h || r.width() != glassCardW) {
+            lp.width = (int) w;
+            lp.height = (int) h;
+            glass.setLayoutParams(lp);
+            // GlassView draws its slab inset by pad, i.e. exactly over the zoomed tile: same corners as the tile.
+            glass.setRadius(radius * scale);
+        }
+        glassCardW = r.width();
+        glassTargetX = x;
+        glassTargetY = y;
+        if (!glassShown) {
+            springX.cancel();
+            springY.cancel();
+            glass.setTranslationX(x);
+            glass.setTranslationY(y);
+            if (animations) glass.animate().alpha(1f).setDuration(reducedMotion ? 100 : 180).start();
+            else glass.setAlpha(1f);
+            glassShown = true;
+        } else if (!animations) {
+            springX.cancel();
+            springY.cancel();
+            glass.setTranslationX(x);
+            glass.setTranslationY(y);
+        } else {
+            springX.animateToFinalPosition(x);
+            springY.animateToFinalPosition(y - glassScrollShift);
+        }
+    }
+
+    /** The glass's glow colour on the cinematic shelf; 0 for plain white. */
+    private void setGlassAccent(int accent) {
+        if (cinematic && !festive && accent != glassAccent) {
+            glassAccent = accent;
+            glass.setAccent(accent);
+        }
+    }
+
+    // ---- featured card ---------------------------------------------------------------------------
+
+    /** Keys, focus and clicks for the featured card: Up to the top bar, Down to the dock, OK opens the app. */
+    private void setUpFeatured() {
+        hero.setVisibility(View.GONE);   // the card names its app; the shelf would sit on top of it
+        featured.view.setOnClickListener(v -> featured.launch(adapter));
+        featured.view.setOnLongClickListener(v -> {
+            open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + featured.packageName())));
+            return true;
+        });
+        featured.view.setOnFocusChangeListener((v, focused) -> {
+            if (focused) onFeaturedFocused();
+        });
+        featured.view.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                (btnInputs.getVisibility() == View.VISIBLE ? btnInputs : btnWifi).requestFocus();
+            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                focusTile(lastFocused < COLUMNS ? lastFocused : 0);
+            } else {
+                // Nothing beside the card: Left and Right stay put.
+                return keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+            }
+            grid.playSoundEffect(keyCode == KeyEvent.KEYCODE_DPAD_UP
+                    ? SoundEffectConstants.NAVIGATION_UP : SoundEffectConstants.NAVIGATION_DOWN);
+            return true;
+        });
+    }
+
+    private void onFeaturedFocused() {
+        featuredFocused = true;
+        parkDock();
+        alignFeatured();
+        // The card is placed by translation, which the descendant offset ignores; add it. Its size comes from
+        // the layout params alignFeatured set, which the first focus can see before the layout pass does.
+        View card = featured.view;
+        ViewGroup.LayoutParams lp = card.getLayoutParams();
+        Rect r = new Rect(0, 0, lp.width > 0 ? lp.width : card.getWidth(), lp.height > 0 ? lp.height : card.getHeight());
+        root.offsetDescendantRectToMyCoords(card, r);
+        r.offset(Math.round(card.getTranslationX()), Math.round(card.getTranslationY()));
+        moveGlass(r, 1f, featured.radiusPx(), 0f);
+        setGlassAccent(featured.color);
+        showGlowOnly(featured.color);
+    }
+
+    /** The featured app was installed or removed since the card was built: Home is rebuilt for it. */
+    private boolean featuredAvailabilityChanged() {
+        return !featuredPackage.isEmpty()
+                && (FeaturedCard.resolve(this, featuredPackage) != null) != (featured != null);
+    }
+
+    /** Back to the card; already focused (back from its app), so restore the glass by hand. */
+    private void focusFeatured() {
+        if (featured.view.isFocused()) onFeaturedFocused();
+        else featured.view.requestFocus();
+    }
+
+    /**
+     * Puts the dock row on the grid's padding line, where a focused dock tile parks it (onTileFocused). The
+     * first layout places the row at the XML padding; when the padding is then raised to push the dock down
+     * the screen, the layout manager keeps the row where it was (it preserves the visible area when the space
+     * shrinks), which leaves the grid scrolled up by the card's height until something parks it. A dock tile
+     * does that on focus; the card has to do it too, because Home opens on the card.
+     */
+    private void parkDock() {
+        RecyclerView.ViewHolder first = grid.findViewHolderForAdapterPosition(0);
+        if (first == null) return;
+        int decoratedTop = first.itemView.getTop() - (int) (6 * density);
+        int dy = decoratedTop - grid.getPaddingTop();
+        if (Math.abs(dy) > (int) (8 * density)) grid.scrollBy(0, dy);
+    }
+
+    /** Keeps the featured card over the dock band, with the band's edges, as the grid lays out and scrolls. */
+    private void alignFeatured() {
+        if (featured == null) return;
+        // The space above the dock band is the grid's top padding; sizing from it here as well as in the
+        // padding listener means a layout pass the listener's size request was dropped from cannot leave the
+        // card at its XML height.
+        featured.setHeight(FeaturedCard.heightFor(grid.getPaddingTop(), density));
+        float left = Float.MAX_VALUE, right = -Float.MAX_VALUE, top = Float.MAX_VALUE;
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int pos = grid.getChildAdapterPosition(child);
+            if (pos < 0 || pos >= COLUMNS) continue;
+            View card = child.findViewById(R.id.card);
+            left = Math.min(left, child.getLeft() + card.getLeft());
+            right = Math.max(right, child.getLeft() + card.getRight());
+            top = Math.min(top, child.getTop() + card.getTop() + child.getTranslationY());
+        }
+        if (top == Float.MAX_VALUE) {
+            featured.park();
+            return;
+        }
+        float pad = DockDecoration.BAND_PAD_DP * density;
+        featured.alignTo(left - pad, right + pad, top - pad);
     }
 
     // ---- top shelf -------------------------------------------------------------------------------
@@ -1387,11 +1531,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * dock_row false: the glow behind the grid takes the focused tile's colour; the big name above the dock does not
-     * show (every tile has its name underneath).
+     * The glow behind the grid in one colour, with no big name above the dock: the focused tile's on a plain grid
+     * (dock_row false, every tile has its name underneath), and the featured card's, which names its own app.
      */
-    private void showGlowOnly(int position) {
-        int color = adapter.ambientColorAt(position);
+    private void showGlowOnly(int color) {
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
@@ -1640,7 +1783,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS && featured == null) return false;   // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                featured.view.requestFocus();
+                grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                return true;
+            }
             target = position - COLUMNS;
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;

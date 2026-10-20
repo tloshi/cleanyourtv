@@ -1,0 +1,10 @@
+{
+  "featured_app": "org.smarttube.stable",
+  "dock_apps": ["com.netflix.ninja", "com.amazon.amazonvideo.livingroom", "com.apple.atve.sony.appletv", "com.disney.disneyplus", "de.telekom.magentatv.tv",
+                "eu.siptv.video", "com.sony.dtv.smartmediaapp", "screnmirroring.com", "com.spotify.tv.android", "com.mxtech.videoplayer.ad"],
+  "hidden_apps": ["com.sony.dtv.tvx", "com.sony.dtv.recapp", "com.sony.dtv.timers", "com.vewd.core.integration.dia", "com.sony.dtv.osat.music"],
+  "live_tv_package": "",
+  "columns": 5,
+  "rows_below_dock": 1,
+  "reduced_motion": false
+}

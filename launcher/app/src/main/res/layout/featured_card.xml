@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The featured app's card above the dock (featured_app). Width, height and position are set in code
+     to match the dock band; see FeaturedCard. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/featured"
+    android:layout_width="match_parent"
+    android:layout_height="144dp"
+    android:layout_gravity="top|start"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:focusable="true"
+    android:clickable="true">
+
+    <ImageView
+        android:id="@+id/featuredBanner"
+        android:layout_width="213dp"
+        android:layout_height="match_parent"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/featuredName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="28dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="left|center_vertical"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:textColor="#FFFFFFFF"
+        android:textSize="44sp"
+        android:fontFamily="@font/outfit_light"
+        android:letterSpacing="-0.02" />
+</LinearLayout>
