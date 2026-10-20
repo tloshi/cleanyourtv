@@ -72,11 +72,24 @@ What this changed: three times the free storage, which Android needs for app upd
 own temporary files; snappier menus; fewer apps updating and starting in the background. Memory
 barely moved: the apps that ran in the background were the ones the owner kept.
 
+## Afternoon: backups, Samsung mirroring, the SmartTube card
+
+| Time | Step | Result |
+|---|---|---|
+| 13:58 | Owner: delete the backups of the removed apps | `backup/apks` (420 MB) and `backup/kodi-data` (73 MB) deleted; the full snapshot stays |
+| 14:00 | Why a Samsung's Smart View never found the TV | Smart View uses Miracast over Wi-Fi Direct, which needs the Wi-Fi radio; the TV is on Ethernet and had Wi-Fi off (`wifi_on=0`, P2P disabled). Sony's receiver was also off: `screnmirroring.com` since before this session, `com.mediatek.wfd` and `com.sony.dtv.networkapp.wifidirect` from batch 5 |
+| 14:01 | `pm enable` those three, `svc wifi enable` | Wi-Fi on, default network still Ethernet; Sony's Screen mirroring screen opens and shows "Device name: L Tv", P2P listening. The two packages left `debloat.txt` |
+| 14:02 | Launcher: `featured_app`, one app on a wide card above the dock (`FeaturedCard`, 6 unit tests; all 81 launcher tests and lint pass), installed with `install.ps1` | SmartTube card on top, Home opens on it; dock Netflix, Prime Video, Apple TV, Disney+, MagentaTV; row 2 Smart IPTV, Media Player, Screen mirroring, Spotify, MX Player |
+| 14:03 | Navigation, read from the UI tree after each key | Down from the card to the dock, Up back to the card and Down to the same dock tile, Up to Inputs and Down to the card, Left/Right stay, rows one at a time; scrolled to row 3 the card slides up with the dock and clips; OK opens SmartTube, Home returns to the card |
+| 14:10 | Live state read again | 35 packages disabled (31 from the list, 3 Sony ships disabled, the stock launcher); `wifi_on` 1. `state-after.txt` rewritten |
+
+`RESTORE.ps1` puts `screnmirroring.com` back to disabled (that is how the TV was) but leaves the
+Wi-Fi radio on; `adb shell svc wifi disable` or the TV's network settings switch it off.
+
 ## Open when this was written
 
+- The first Smart View connection from the owner's Samsung (the TV side is ready and waiting).
 - Close network ADB: on the TV, Developer options > USB debugging off and revoke USB debugging
   authorisations, reboot; then `Test-NetConnection 192.168.178.26 -Port 5555` must fail. Not done yet.
 - Checks only the real remote and devices can prove: the mic button, a film from a USB drive in Media
   Player, AirPlay from an iPhone, casting from a phone.
-- Whether to build a single large SmartTube card above the rows (a new launcher feature) instead of the
-  current first-tile layout.

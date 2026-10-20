@@ -1,5 +1,5 @@
-# State after debloat, launcher install and the speed round
-# read from the TV at 2026-10-20 13:16 (after a reboot); every change since state-before.txt is in LOG.md
+# State after debloat, launcher install, the speed round and Samsung screen mirroring
+# read from the TV at 2026-10-20 14:10; every change since state-before.txt is in LOG.md
 # model BRAVIA 4K UR3 (BRAVIA_UR3_EU), Android 10 (API 29)
 # firmware BRAVIA_UR3_EU-user 10 QTG3.200305.006.S97 662301 release-keys
 # SoC mt5893, ro.adb.secure=1
@@ -11,6 +11,7 @@ settings global transition_animation_scale: 0.5
 settings global animator_duration_scale: 0.5
 settings global private_dns_mode: (not set)
 settings global private_dns_specifier: (not set)
+settings global wifi_on: 1
 settings secure default_input_method: com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME
 settings secure enabled_accessibility_services: (empty)
 settings secure screensaver_enabled: 0
@@ -18,9 +19,9 @@ settings secure screensaver_default_component: com.google.android.backdrop/.Back
 
 owner-installed apps: 7, all enabled and untouched (15 never-opened ones were uninstalled, see LOG.md; names kept locally in backup/)
 
-this project's launcher: com.gathin.tvhome, installed and Home
+this project's launcher: com.gathin.tvhome, installed and Home (theme: examples/sony-bravia-4k-ur3/theme)
 
-system packages: 206 (38 disabled)
+system packages: 206 (35 disabled)
 enabled   android
 enabled   android.auto_generated_rro_product__
 enabled   android.auto_generated_rro_vendor__
@@ -101,7 +102,7 @@ enabled   com.mediatek.agent
 enabled   com.mediatek.backgrounddetection
 enabled   com.mediatek.dmagent
 enabled   com.mediatek.network
-disabled  com.mediatek.wfd
+enabled   com.mediatek.wfd
 enabled   com.netflix.ninja
 enabled   com.netflix.partner.ncm
 disabled  com.qterics.da.product
@@ -159,7 +160,7 @@ enabled   com.sony.dtv.irblaster
 enabled   com.sony.dtv.irbservice
 disabled  com.sony.dtv.livingfit
 disabled  com.sony.dtv.multiscreendemo
-disabled  com.sony.dtv.networkapp.wifidirect
+enabled   com.sony.dtv.networkapp.wifidirect
 enabled   com.sony.dtv.networksettings
 disabled  com.sony.dtv.notificationcenter
 enabled   com.sony.dtv.oadservice
@@ -225,5 +226,5 @@ enabled   com.vewd.core.integration.dia
 enabled   com.vewd.core.service
 disabled  com.youview.poa
 enabled   mtktvapi.agent
-disabled  screnmirroring.com
+enabled   screnmirroring.com
 disabled  tv.samba.ssm

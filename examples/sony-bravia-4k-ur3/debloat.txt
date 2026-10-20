@@ -15,8 +15,8 @@
 # com.sony.dtv.sonysystemservice and the Sony settings apps: they drive HDMI, the tuner, Bravia Sync
 # and the remote. Keep com.sony.dtv.hbbtvplayer for the red button on German channels.
 # Already disabled at the factory: com.sony.dtv.b2b.softap, com.sony.dtv.b2b.vendorprotocol,
-# com.youview.poa, screnmirroring.com (Sony's Screen mirroring app, so Miracast from Android phones
-# never worked here; AirPlay is a separate app).
+# com.youview.poa, screnmirroring.com (Sony's Screen mirroring tile, so Miracast from Android phones
+# never worked here; enabled again on 2026-10-20 for a Samsung's Smart View, see below).
 # Kept by choice: voice assistant, Chromecast, AirPlay + HomeKit, firmware updates, DLNA (which plays
 # through com.sony.dtv.smartmediaapp and com.sony.dtv.osat.music, so those stay too), Netflix,
 # Prime Video, Apple TV, Sony's network remote start (wakes the TV for AirPlay and casting).
@@ -56,9 +56,9 @@ com.sony.dtv.livingfit                         # Living Decor screensaver
 com.google.android.youtube.tv                  # official YouTube; SmartTube is used instead (the remote's YouTube button then does nothing)
 com.google.android.youtube.tvmusic             # YouTube Music
 
-# Miracast / Wi-Fi Direct mirroring, unused (Sony's Screen mirroring app was already off)
-com.mediatek.wfd
-com.sony.dtv.networkapp.wifidirect
+# Miracast is kept: a Samsung's Smart View finds the TV only with com.mediatek.wfd,
+# com.sony.dtv.networkapp.wifidirect and screnmirroring.com enabled AND the Wi-Fi radio on, which an
+# Ethernet-connected TV has off (`svc wifi enable`; the TV stays on Ethernet). See README.md.
 
 # smart-home control and Sony notices, disabled by choice
 com.sony.dtv.seeds.iot                         # Sony IoT: Works with Alexa setup, FCM push, runs at boot

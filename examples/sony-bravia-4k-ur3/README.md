@@ -8,12 +8,18 @@ Every step in order, with its result: [`LOG.md`](LOG.md). Every package before a
 
 ## What changed
 
-- **33 packages disabled**, never uninstalled: tracking (Samba TV, Sony/Qterics/IDD agents), ads and
+- **31 packages disabled**, never uninstalled: tracking (Samba TV, Sony/Qterics/IDD agents), ads and
   promos (My BRAVIA, Sony Select, Google recommendation rows, partner auto-installs), the shop demo,
-  help tiles, Play Games, Play Movies, official YouTube, YouTube Music, Miracast and the Alexa
-  smart-home services. The full list with reasons: [`debloat.txt`](debloat.txt).
+  help tiles, Play Games, Play Movies, official YouTube, YouTube Music and the Alexa smart-home
+  services. The full list with reasons: [`debloat.txt`](debloat.txt).
 - **New home screen**: the CleanYourTV launcher (`com.gathin.tvhome`) is Home, and the stock launcher
-  (`com.google.android.tvlauncher`) is disabled.
+  (`com.google.android.tvlauncher`) is disabled. SmartTube sits on a wide card at the top and Home
+  opens on it; Netflix, Prime Video, Apple TV, Disney+ and MagentaTV are the dock; Smart IPTV, Media
+  Player (USB), Screen mirroring, Spotify and MX Player the row under it.
+- **Screen mirroring for a Samsung's Smart View is switched on**: Sony's Miracast receiver is enabled
+  and the Wi-Fi radio is on (the TV still uses Ethernet for its internet). The TV side was checked (it
+  advertises itself as "L Tv"); the first test from the phone is in [`LOG.md`](LOG.md). See "Share from
+  your Samsung phone" below.
 - **Speed round**: app caches cleared (storage went from 81% to 40% full), animations set to 0.5x, and
   15 apps you had never opened uninstalled (KiKA, ARD, RTL+, DAZN, Steam Link, Downloader, BrowseHere,
   AirScreen, OnStream, HiTV, ReVanced Manager, two microG copies, Kodi, one test build of yours).
@@ -84,12 +90,24 @@ Feature you want back, and the packages to enable:
 |---|---|
 | Official YouTube (the remote's YouTube button) | `com.google.android.youtube.tv` |
 | YouTube Music | `com.google.android.youtube.tvmusic` |
-| Mirroring from Android phones and Windows (Miracast) | `com.mediatek.wfd`, `com.sony.dtv.networkapp.wifidirect`, `screnmirroring.com` (the last was already off before) |
 | Alexa / smart-home control | `com.sony.dtv.seeds.iot`, `com.sony.dtv.seeds.auth`, `com.sony.dtv.smarthomesettings` |
 | BRAVIA notifications | `com.sony.dtv.notificationcenter` |
 | Ambient mode / Living Decor screensavers | `com.google.android.backdrop`, `com.sony.dtv.livingfit` |
 | Help guide | `com.sony.dtv.smarthelp`, `com.sony.dtv.customersupport` |
 | The stock home screen | `com.google.android.tvlauncher`, then hold OK on the Settings pill > Launcher settings > default home, and pick it in Android's Home picker (or run the full restore) |
+
+## Share from your Samsung phone
+
+1. On the TV, open the **Screen mirroring** tile (row 2). The TV shows "Device name: L Tv" and waits.
+2. On the phone, swipe down twice, tap **Smart View**, pick **L Tv**, and accept on the TV if asked.
+
+This is Miracast over Wi-Fi Direct, a direct link between phone and TV, so it needs the TV's Wi-Fi
+radio on even though the TV is on Ethernet; that radio being off is why the phone never found the TV
+before. If someone switches Wi-Fi off in the TV's settings, Smart View loses the TV again; switch it
+back on there, or `adb -s 192.168.178.26:5555 shell svc wifi enable`.
+
+For videos and photos in Google Photos, the **Cast** icon in the app sends them to the TV's built-in
+Chromecast instead, over the normal network, with no TV screen to open first.
 
 ## Change the dock, the rows or the wallpaper
 
@@ -99,6 +117,8 @@ The layout lives in [`theme\config.json`](theme/config.json). Edit it, then push
 powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\theme
 ```
 
+- **`featured_app`**: the app on the big card at the top (SmartTube). Another package name swaps it;
+  remove the line for no card.
 - **`dock_apps`**: the order of the first tiles. The first `columns` entries sit in the dock band (row 1),
   the rest start row 2 in the same order; every other app follows alphabetically. Package names of the
   apps on the TV: `adb -s 192.168.178.26:5555 shell pm list packages -3` (apps you installed).
@@ -125,7 +145,7 @@ Home and pushes this theme.
 ## Things worth knowing
 
 - **After a Sony firmware update**, an updated system app can come back enabled. Check with
-  `adb -s 192.168.178.26:5555 shell pm list packages -d` (38 lines: 33 from the list, 4 that Sony ships
+  `adb -s 192.168.178.26:5555 shell pm list packages -d` (35 lines: 31 from the list, 3 that Sony ships
   disabled, and the stock launcher) and re-apply the list with
   `powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt`.
 - **Inputs**: the pill lists HDMI 1 to 4 and AV; a device that announces itself over HDMI-CEC is named
