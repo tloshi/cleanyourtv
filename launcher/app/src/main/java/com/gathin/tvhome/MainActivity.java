@@ -770,6 +770,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void onFeaturedFocused() {
         featuredFocused = true;
+        parkDock();
+        alignFeatured();
         // The card is placed by translation, which the descendant offset ignores; add it. Its size comes from
         // the layout params alignFeatured set, which the first focus can see before the layout pass does.
         View card = featured.view;
@@ -789,14 +791,32 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Back to the card; already focused (back from its app), so restore the glass by hand. */
     private void focusFeatured() {
-        alignFeatured();
         if (featured.view.isFocused()) onFeaturedFocused();
         else featured.view.requestFocus();
+    }
+
+    /**
+     * Puts the dock row on the grid's padding line, where a focused dock tile parks it (onTileFocused). The
+     * first layout places the row at the XML padding; when the padding is then raised to push the dock down
+     * the screen, the layout manager keeps the row where it was (it preserves the visible area when the space
+     * shrinks), which leaves the grid scrolled up by the card's height until something parks it. A dock tile
+     * does that on focus; the card has to do it too, because Home opens on the card.
+     */
+    private void parkDock() {
+        RecyclerView.ViewHolder first = grid.findViewHolderForAdapterPosition(0);
+        if (first == null) return;
+        int decoratedTop = first.itemView.getTop() - (int) (6 * density);
+        int dy = decoratedTop - grid.getPaddingTop();
+        if (Math.abs(dy) > (int) (8 * density)) grid.scrollBy(0, dy);
     }
 
     /** Keeps the featured card over the dock band, with the band's edges, as the grid lays out and scrolls. */
     private void alignFeatured() {
         if (featured == null) return;
+        // The space above the dock band is the grid's top padding; sizing from it here as well as in the
+        // padding listener means a layout pass the listener's size request was dropped from cannot leave the
+        // card at its XML height.
+        featured.setHeight(FeaturedCard.heightFor(grid.getPaddingTop(), density));
         float left = Float.MAX_VALUE, right = -Float.MAX_VALUE, top = Float.MAX_VALUE;
         for (int i = 0; i < grid.getChildCount(); i++) {
             View child = grid.getChildAt(i);

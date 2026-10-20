@@ -115,7 +115,9 @@ final class FeaturedCard {
 
     void setHeight(int heightPx) {
         ViewGroup.LayoutParams lp = view.getLayoutParams();
-        if (lp.height == heightPx) return;
+        // Compared with the laid-out height, not only the params: a request made from inside a layout pass
+        // (the grid's padding listener) is dropped by the view root, and would otherwise read as done.
+        if (lp.height == heightPx && view.getHeight() == heightPx) return;
         lp.height = heightPx;
         view.setLayoutParams(lp);
         ViewGroup.LayoutParams bannerLp = banner.getLayoutParams();
@@ -127,7 +129,7 @@ final class FeaturedCard {
     void alignTo(float bandLeft, float bandRight, float bandTop) {
         ViewGroup.LayoutParams lp = view.getLayoutParams();
         int width = Math.round(bandRight - bandLeft);
-        if (lp.width != width) {
+        if (lp.width != width || view.getWidth() != width) {
             lp.width = width;
             view.setLayoutParams(lp);
         }
