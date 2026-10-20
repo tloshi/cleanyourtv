@@ -12,6 +12,11 @@ import androidx.recyclerview.widget.RecyclerView;
 /** Draws the tvOS style lighter band behind the first (dock) row and adds a gap below it. */
 public class DockDecoration extends RecyclerView.ItemDecoration {
 
+    /** The band's fill and edge, shared with the featured card above it. */
+    static final int BAND_COLOR = 0xFF141416, EDGE_COLOR = 0x1FFFFFFF;
+    /** How far the band reaches beyond the dock tiles on every side. */
+    static final float BAND_PAD_DP = 14f;
+
     private final int dockSize;
     private final float density;
     private final Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -21,10 +26,10 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     DockDecoration(int dockSize, float density) {
         this.dockSize = dockSize;
         this.density = density;
-        band.setColor(0xFF141416);
+        band.setColor(BAND_COLOR);
         edge.setStyle(Paint.Style.STROKE);
         edge.setStrokeWidth(density);
-        edge.setColor(0x1FFFFFFF);
+        edge.setColor(EDGE_COLOR);
     }
 
     @Override
@@ -58,7 +63,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             }
         }
         if (!any) return;
-        float pad = 14 * density;
+        float pad = BAND_PAD_DP * density;
         rect.inset(-pad, -pad);
         float radius = 26 * density;
         c.drawRoundRect(rect, radius, radius, band);
