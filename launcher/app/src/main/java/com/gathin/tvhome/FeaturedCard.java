@@ -142,8 +142,9 @@ final class FeaturedCard {
         view.setTranslationY(-view.getHeight() * 2f);
     }
 
-    void launch(Context ctx, boolean advancedEffects) {
-        AppAdapter.open(ctx, component, label, advancedEffects);
+    /** Opens the app through the grid's adapter, so it starts the way its tile would. */
+    void launch(AppAdapter adapter) {
+        adapter.open(component, label);
     }
 
     float radiusPx() {

@@ -149,7 +149,7 @@ Home and pushes this theme.
   disabled, and the stock launcher) and re-apply the list with
   `powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt`.
 - **Inputs**: the pill lists HDMI 1 to 4 and AV; a device that announces itself over HDMI-CEC is named
-  in its port's row (HDMI 1 · PlayStation 5). The remote's Input button still opens Sony's own panel.
+  in its port's row (PlayStation 5 · HDMI 1). The remote's Input button still opens Sony's own panel.
 - **No ad-blocking DNS** was set: Android's Private DNS has no fallback, so a resolver outage shows as
   "No internet" although the connection is fine.
 - **Security**: switch USB debugging off when you are not changing anything. Network ADB on this TV
