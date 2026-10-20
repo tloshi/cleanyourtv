@@ -53,11 +53,29 @@ Media Player and Sony Music stay enabled because DLNA plays through them.
 Not done, on the owner's decision: ad-blocking Private DNS (Android has no fallback, so a resolver
 outage would show as "No internet").
 
+## Speed round (owner: "I thought this would make my TV faster")
+
+| Time | Step | Result |
+|---|---|---|
+| 10:12 | Measured, TV on, 11 minutes up | 710 MB RAM available, swap full, 1.1 GB storage free. Largest: Netflix and SmartTube (cached from the smoke test), Vewd 83 MB (kept: Sony's AirPlay runs on it), voice assistant 55 MB (kept by choice) |
+| 10:15 | Storage per app (`dumpsys diskstats`) | App caches 1.65 GB, 1.27 GB of it the Play Store; storage 81% full |
+| 10:17 | Baseline: reboot, 2.5 minutes idle, screen on | 856 MB RAM available, swap 84% used, 390 processes (44 app processes), 1.27 GB free |
+| 10:18 | Usage since 31 January (`dumpsys usagestats`, yearly) | 15 of the owner's apps never launched (Kodi once, in February). The iPhone's AirPlay uses Sony's receiver; AirScreen was never on screen or running this year |
+| 13:05 | Copied the 15 apps' APKs and Kodi's data folder to `backup/` (local only; the owner said no backup is needed) | 420 MB of APKs, 73 MB of Kodi data |
+| 13:09 | Uninstalled, owner's choice: KiKA, ARD Mediathek, RTL+, DAZN, Steam Link, Downloader, BrowseHere, AirScreen, OnStream, HiTV, ReVanced Manager, the two microG copies (`com.mgoogle.android.gms`, `app.revanced.android.gms`), Kodi, and one sideloaded build of the owner's own | All `Success`; MX Player kept on the owner's word |
+| 13:10 | `settings put global window_animation_scale / transition_animation_scale / animator_duration_scale 0.5` | Menus and app openings animate twice as fast |
+| 13:10 | `pm trim-caches 100G` (the same as clearing cached data in Settings) | Storage 40% full, 3.9 GB free |
+| 13:10 | Crash log | Sony's DIAL service (`com.sony.dtv.webapi.core`) crashed once at 13:09:58 looking up AirScreen's activity, 4 s before Android announced its removal; it restarted by itself and has answered DIAL requests since. Earlier, at 12:50, the media scanner crashed once on a USB drive that mounted and vanished; nothing involved there was disabled |
+| 13:16 | After: reboot, 2.5 minutes idle | 898 MB RAM available, swap full, 383 processes (43 app processes), 3.9 GB free, 0 crashes since boot. The TV came back in standby this time, so the RAM figures are not strictly comparable with the baseline (screen on) |
+
+What this changed: three times the free storage, which Android needs for app updates and for its
+own temporary files; snappier menus; fewer apps updating and starting in the background. Memory
+barely moved: the apps that ran in the background were the ones the owner kept.
+
 ## Open when this was written
 
 - Close network ADB: on the TV, Developer options > USB debugging off and revoke USB debugging
-  authorisations, reboot; then `Test-NetConnection 192.168.178.26 -Port 5555` must fail. The TV was
-  off at 10:10, so this is not verified yet.
+  authorisations, reboot; then `Test-NetConnection 192.168.178.26 -Port 5555` must fail. Not done yet.
 - Checks only the real remote and devices can prove: the mic button, a film from a USB drive in Media
   Player, AirPlay from an iPhone, casting from a phone.
 - Whether to build a single large SmartTube card above the rows (a new launcher feature) instead of the

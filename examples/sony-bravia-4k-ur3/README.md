@@ -14,10 +14,13 @@ Every step in order, with its result: [`LOG.md`](LOG.md). Every package before a
   smart-home services. The full list with reasons: [`debloat.txt`](debloat.txt).
 - **New home screen**: the CleanYourTV launcher (`com.gathin.tvhome`) is Home, and the stock launcher
   (`com.google.android.tvlauncher`) is disabled.
+- **Speed round**: app caches cleared (storage went from 81% to 40% full), animations set to 0.5x, and
+  15 apps you had never opened uninstalled (KiKA, ARD, RTL+, DAZN, Steam Link, Downloader, BrowseHere,
+  AirScreen, OnStream, HiTV, ReVanced Manager, two microG copies, Kodi, one test build of yours).
 - **Kept on purpose**: voice search on the remote, Chromecast, AirPlay and Apple Home, firmware updates,
-  DLNA, Media Player (USB films), Netflix, Prime Video, Apple TV, and every app you installed yourself.
+  DLNA, Media Player (USB films), Netflix, Prime Video, Apple TV, MX Player and the other apps you use.
 
-Nothing else was touched: no settings, no DNS, no app data.
+No DNS was changed and no app data was cleared, apart from the caches.
 
 ## Undo everything
 
@@ -37,7 +40,22 @@ powershell -ExecutionPolicy Bypass -File backup\2026-10-20-bravia-ur3-before\RES
 ```
 
 The first command only lists what would change; the second does it and ends with "the TV matches the
-snapshot". If the TV got a new IP address, add `-TvHost <new ip>`.
+snapshot". If the TV got a new IP address, add `-TvHost <new ip>`. It also sets the animations back
+to normal speed. It does not bring back the 15 uninstalled apps (it lists them as gone): install the
+ones you want from the Play Store, or from the copies in `backup\apks\` while that folder exists:
+
+```powershell
+adb -s 192.168.178.26:5555 install-multiple (Get-ChildItem backup\apks\org.xbmc.kodi\*.apk).FullName
+```
+
+Kodi's old settings and add-ons are in `backup\kodi-data\`; after reinstalling Kodi, before opening
+it: `adb -s 192.168.178.26:5555 push backup\kodi-data\org.xbmc.kodi /sdcard/Android/data/`.
+
+Only the animation speed back to normal, nothing else:
+
+```powershell
+foreach ($key in 'window_animation_scale', 'transition_animation_scale', 'animator_duration_scale') { adb -s 192.168.178.26:5555 shell settings put global $key 1 }
+```
 
 **Undo only the debloat list** (second route, from the record in `C:\Users\taula\.cleanyourtv\`):
 
