@@ -18,6 +18,7 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.1.50 th
 | `aurora/` | A dark aurora wallpaper (teal and violet on navy, darker at the bottom) with a matching background colour |
 | `dussehra/` | Festive skin for Dussehra (ends 21 Oct 2026): a marigold toran, a faint gold rangoli, a diya for Wi-Fi, a bell for Inputs, a marigold for Settings and a petal shower |
 | `six-columns/` | Six smaller tiles per row and one grid row visible under the dock |
+| `dusk/` | A dusk landscape drawn by `tools/dusk_wallpaper.py`, the apps as one row of square icons along the bottom, the date written out under a large clock, the weather under that, and two cards: the week's forecast and this month's calendar. Set your own `latitude`, `longitude` and `weather_location` first |
 
 ## Keys
 
@@ -66,6 +67,43 @@ is ignored, and a file that doesn't parse is ignored as a whole, so a theme can 
 | `app_keys` | list of strings | Remote buttons that open an app, as `"190:com.google.android.youtube.tv"` or `"KEYCODE_BUTTON_3:com.google.android.youtube.tv"`, for `InputKeyService` or `HomeKeyService` |
 | `race_calendar` | list of races | F1 race-weekend mode: from 12 hours before a weekend's first session until 4 hours after the race starts, a panel under the clock shows the next session with a countdown (or the live one) and the weekend's session times in the TV's time zone. Write it with `tools/race_calendar.py <theme folder>`, which fetches the season from the free Jolpica API; the launcher itself never goes online |
 | `cinematic_home` | bool | Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its colour, with a larger name, "Last opened" (apps opened from Home), dock position dots, a focus glow in the app's colour and a translucent dock band; off by default |
+| `icon_row` | bool | Every app as a square icon with its name, in one row along the bottom that scrolls sideways, `dock_apps` first; made for a wallpaper, which stays in view. No dock band, top shelf, featured card or grid; Left and Right move along the row, Up reaches the top bar, Reorder apps works along it (`false` by default) |
+| `date_below_clock` | bool | The date on its own line under a larger clock, written out in full ("Thursday, 22 October 2026"), with the pills level with the clock; `false` (the default) keeps it beside the clock |
+| `show_greeting` | bool | The time-of-day greeting above the clock (`true` by default); `false` leaves it out |
+| `weather` | bool | A line under the clock for the place at `latitude` and `longitude`: the temperature and conditions now, today's high and low, with a glyph for the sky. From Open-Meteo (free, no key, no account); the launcher's one use of the network, see below (`false` by default) |
+| `latitude`, `longitude` | number | Where the TV is, in decimal degrees (`52.52` and `13.405` for Berlin); both are needed for `weather` |
+| `weather_location` | string | The name that opens the weather line ("Kanpur · 27° Clear · H 31° L 21°"); empty leaves it out |
+| `weather_units` | `celsius` or `fahrenheit` | How the degrees read (`celsius` by default) |
+| `forecast_widget` | bool | A card under the clock with the week's weather: each day's name, sky, high and low, and a bar that places the day's range in the week's. Needs `weather` (`false` by default) |
+| `calendar_widget` | bool | A card under the clock with this month's calendar, today in a white disc, the weeks starting on the TV's first day of the week (`false` by default) |
+
+## Dusk: the icon row, the weather and the cards
+
+`themes/dusk/` turns the home screen into a picture with a row of apps along the bottom:
+
+```json
+{ "wallpaper": true, "icon_row": true, "date_below_clock": true,
+  "weather": true, "latitude": 52.52, "longitude": 13.405, "weather_location": "Berlin",
+  "forecast_widget": true, "calendar_widget": true }
+```
+
+![The dusk theme on a Sony BRAVIA 4K UR3: the icon row, the date and weather under the clock, the forecast and calendar cards](../docs/theme-dusk.jpg)
+
+- **The icon row** is the whole app list in one line: `dock_apps` first, then the rest in their usual order,
+  every app as a 64dp square made from its icon (an adaptive icon shows its full background, a flat one that
+  fills its square fills the tile, anything else sits on dark glass) with its name underneath. It scrolls
+  sideways, the glass highlight follows, and a dark gradient rises from the bottom edge so the names read over
+  any picture. Nothing else changes: the pills at the top right, Inputs, the Settings menu, Reorder apps (Left
+  and Right only) and the App library pill, which sits after the last icon.
+- **The weather** needs a place. The launcher asks Open-Meteo (https://open-meteo.com) once every 30 minutes
+  while Home is on screen, sends nothing but the coordinates, keeps the last answer on the TV for a day and shows
+  nothing at all when it is older. It is the only thing in the launcher that uses the network, and it does not
+  happen until a theme or `config.xml` sets `weather` with both coordinates; the `INTERNET` permission exists for
+  it alone. Find your coordinates on any map site and put them in your own copy of the theme.
+- **The cards** take no focus, so the remote behaves exactly as before. They are made for the icon row, which
+  leaves the middle of the screen free; with the dock and grid they push the rows down.
+- **The wallpaper** is drawn by `tools/dusk_wallpaper.py` (Pillow), so it carries no licence but the repository's;
+  edit the colours or the seed there and run it again, or drop your own `wallpaper.jpg` in.
 
 ## Wallpapers
 

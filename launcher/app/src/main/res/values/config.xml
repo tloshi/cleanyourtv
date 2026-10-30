@@ -165,4 +165,36 @@
          dots, the focus glow takes the app's colour and the dock band turns translucent. false keeps the plain
          shelf. Can also be set with "cinematic_home": true in a theme's config.json. -->
     <bool name="cinematic_home">false</bool>
+
+    <!-- Icon row: every app as a square icon with its name, in one row along the bottom of the screen that scrolls
+         sideways, dock_apps first. The dock band, the top shelf, the featured card and rows_below_dock do not apply;
+         Left and Right move along the row and Up reaches the top bar. Made for a wallpaper, which stays in view.
+         A theme can set "icon_row": true. -->
+    <bool name="icon_row">false</bool>
+
+    <!-- The date on its own line under a larger clock, written out in full ("Thursday, 22 October 2026"), instead of
+         beside it; the top bar's pills then stay level with the clock. A theme can set "date_below_clock": true. -->
+    <bool name="date_below_clock">false</bool>
+
+    <!-- The time-of-day greeting above the clock; false leaves it out. A theme can set "show_greeting": false. -->
+    <bool name="show_greeting">true</bool>
+
+    <!-- Weather under the clock for the place at latitude and longitude (decimal degrees, 52.52 and 13.405 for
+         Berlin): the temperature and conditions now with today's high and low, from Open-Meteo (open-meteo.com:
+         free, no key, no account). This is the launcher's one use of the network: nothing is sent but the
+         coordinates, only while Home is on screen, every 30 minutes, and the last answer is kept on the TV for a
+         day. Off unless weather is true and both coordinates are set. A theme can set "weather": true,
+         "latitude": 52.52, "longitude": 13.405, "weather_location": "Berlin" (the name that opens the line; empty
+         leaves it out) and "weather_units": "fahrenheit" ("celsius" by default). -->
+    <bool name="weather">false</bool>
+    <string name="latitude" translatable="false"></string>
+    <string name="longitude" translatable="false"></string>
+    <string name="weather_location" translatable="false"></string>
+    <string name="weather_units" translatable="false">celsius</string>
+
+    <!-- Cards under the clock, which take no focus: the week's weather (needs weather above) and this month's
+         calendar with today marked. Made for the icon row, which leaves the middle of the screen free; with the
+         dock and grid they push the rows down. A theme can set "forecast_widget": true and "calendar_widget": true. -->
+    <bool name="forecast_widget">false</bool>
+    <bool name="calendar_widget">false</bool>
 </resources>

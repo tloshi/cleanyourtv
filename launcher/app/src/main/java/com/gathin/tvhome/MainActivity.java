@@ -59,6 +59,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -68,6 +69,7 @@ import androidx.dynamicanimation.animation.FloatPropertyCompat;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
@@ -174,6 +176,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean reducedMotion;
     /** config.xml dock_row: the first row is a separate dock (band, parked low, top shelf) rather than plain grid. */
     private boolean dockRow;
+    /** config icon_row: one row of square icons along the bottom, sideways; no dock band, shelf or grid. */
+    private boolean iconRow;
+    /** How far the icon row has scrolled the glass sideways; springX works without it, as springY does for dy. */
+    private float glassScrollShiftX;
+    /** The weather for the configured place (config weather, latitude, longitude), or null when none is set. */
+    private WeatherClient weather;
+    private Weather.Place weatherPlace;
+    private Weather.Report shownWeather;
+    private View weatherLine;
+    private ImageView weatherIcon;
+    private TextView weatherText;
+    /** The cards under the clock (forecast_widget, calendar_widget) and their row, gone while neither shows. */
+    private View widgets;
+    private ForecastView forecastWidget;
+    private MonthView calendarWidget;
+    private boolean showForecast, showCalendar;
     /** Festive skin from the theme (see Festival); applied while it is active today. */
     private Festival festival = Festival.NONE;
     private boolean festive;
@@ -274,6 +292,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
+            refreshWeather();
+            if (showCalendar) calendarWidget.update();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -292,6 +312,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         advancedEffects = cfg.animations && cfg.advancedEffects;
         reducedMotion = cfg.reducedMotion;
         dockRow = cfg.dockRow;
+        iconRow = cfg.iconRow;
         festival = cfg.festival;
         festive = festival.active(LocalDate.now());
         liveTvPkg = cfg.liveTvPackage;
@@ -346,11 +367,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         vpnApp = cfg.vpnApp;
         moduleCards = cfg.moduleCards;
         hiddenApps = new HashSet<>(cfg.hiddenApps);
+        setUpHeader(cfg);
+        setUpWidgets(cfg);
 
         grid = findViewById(R.id.grid);
         rtlAppGrid = getResources().getBoolean(R.bool.rtl_app_grid);
         // Mirror only the app grid; the header and other locales keep their own layouts.
-        grid.setLayoutManager(new GridLayoutManager(this, COLUMNS) {
+        if (iconRow) grid.setLayoutManager(iconRowLayoutManager());
+        else grid.setLayoutManager(new GridLayoutManager(this, COLUMNS) {
             @Override
             protected boolean isLayoutRTL() {
                 return rtlAppGrid;
@@ -386,11 +410,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
         });
-        ((GridLayoutManager) grid.getLayoutManager()).setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+        if (!iconRow) ((GridLayoutManager) grid.getLayoutManager()).setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override public int getSpanSize(int position) { return adapter != null && adapter.isLibraryAt(position) ? COLUMNS : 1; }
         });
         grid.setHasFixedSize(true);
         grid.setItemAnimator(null);
+        if (iconRow) setUpIconRow();
         // Tiles that scroll out while one is carried come back from the view cache without a rebind; set their
         // dimming again whenever one attaches, so none stays dim after the drop.
         grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
@@ -430,6 +455,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // rows_below_dock grid rows under it; the rest of the grid stays below until you press Down.
         int rowsBelowDock = cfg.rowsBelowDock;
         grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (iconRow) {
+                // The row sizes itself at the bottom; only the glass needs refitting after a layout.
+                grid.post(this::refitGlass);
+                return;
+            }
             int h = b - t;
             // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
@@ -468,6 +498,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
                 glass.setTranslationY(glass.getTranslationY() - dy);
+                glassTargetX -= dx;   // the icon row scrolls sideways; the grid never does (dx is 0)
+                glassScrollShiftX -= dx;
+                glass.setTranslationX(glass.getTranslationX() - dx);
             }
         });
 
@@ -475,7 +508,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (featured != null) grid.getViewTreeObserver().addOnGlobalLayoutListener(this::alignFeatured);
 
         // Liquid feel: soft springs on the highlight's position.
-        springX = new SpringAnimation(glass, DynamicAnimation.TRANSLATION_X);
+        springX = new SpringAnimation(glass, new FloatPropertyCompat<View>("glassContentX") {
+            @Override
+            public float getValue(View v) {
+                return v.getTranslationX() - glassScrollShiftX;
+            }
+
+            @Override
+            public void setValue(View v, float value) {
+                v.setTranslationX(value + glassScrollShiftX);
+            }
+        });
         springY = new SpringAnimation(glass, new FloatPropertyCompat<View>("glassContentY") {
             @Override
             public float getValue(View v) {
@@ -526,7 +569,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 // Down to the featured card, or back to the dock tile Up came from; never wherever the
                 // focus finder lands.
                 if (featured != null) featured.view.requestFocus();
-                else focusTile(lastFocused % COLUMNS);
+                else focusTile(iconRow ? lastFocused : lastFocused % COLUMNS);
                 return true;
             }
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnWifi;
@@ -628,6 +671,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
+        if (weather != null) weather.start();
+        refreshWeather();
+        if (showCalendar) calendarWidget.update();
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -727,6 +773,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
+        if (weather != null) weather.stop();
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
@@ -761,6 +808,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onDestroy() {
         super.onDestroy();
         wallpaperPlayer.close();
+        if (weather != null) weather.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
@@ -1001,6 +1049,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             drop();
             return;
         }
+        // The icon row has no row above or below: Up and Down move nothing.
+        if (iconRow && (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)) return;
         int to;
         // rtl_app_grid (Hebrew) mirrors the grid: position 0 is on the right, so Left moves towards the end.
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) to = rtlAppGrid ? from + 1 : from - 1;
@@ -1020,10 +1070,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * afterwards if the moved tile itself ends up off screen.
      */
     private void keepScroll(Runnable change) {
-        GridLayoutManager lm = (GridLayoutManager) grid.getLayoutManager();
+        LinearLayoutManager lm = (LinearLayoutManager) grid.getLayoutManager();
         int first = lm.findFirstVisibleItemPosition();
         View firstView = first != RecyclerView.NO_POSITION ? lm.findViewByPosition(first) : null;
-        int offset = firstView != null ? lm.getDecoratedTop(firstView) - grid.getPaddingTop() : 0;
+        int offset = firstView == null ? 0
+                : iconRow ? lm.getDecoratedLeft(firstView) - grid.getPaddingLeft()
+                : lm.getDecoratedTop(firstView) - grid.getPaddingTop();
         change.run();
         if (firstView != null) lm.scrollToPositionWithOffset(first, offset);
     }
@@ -1092,12 +1144,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         r.set(0, 0, card.getWidth(), card.getHeight());
         root.offsetDescendantRectToMyCoords(card, r);
         float pad = 6f * density;        // matches GlassView's glow inset
-        moveGlass(r, adapter.focusScale(), AppAdapter.cornerRadius(card.getWidth(), density),
+        moveGlass(r, adapter.focusScale(), adapter.cornerRadiusPx(card.getWidth()),
                 advancedEffects ? 4f * density : 0f);
         // Cinematic shelf: the highlight glows in the dock app's colour, plain white in the grid.
         setGlassAccent(cinematic && !festive && position < COLUMNS ? adapter.ambientColorAt(position) : 0);
         View item = (View) card.getParent();
-        if (dockRow && position < COLUMNS) {
+        if (iconRow) {
+            // The row: no shelf and no glow, the wallpaper sets the mood; scroll sideways just enough for the glass.
+            hideHero();
+            revealRect.set(-(int) pad * 2, 0, item.getWidth() + (int) pad * 2, item.getHeight());
+            grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
+        } else if (dockRow && position < COLUMNS) {
             // Dock: park it at the bottom of the screen and show the top shelf for this app.
             int decoratedTop = item.getTop() - (int) (6 * density);
             int dy = decoratedTop - grid.getPaddingTop();
@@ -1171,7 +1228,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             glass.setTranslationX(x);
             glass.setTranslationY(y);
         } else {
-            springX.animateToFinalPosition(x);
+            springX.animateToFinalPosition(x - glassScrollShiftX);
             springY.animateToFinalPosition(y - glassScrollShift);
         }
     }
@@ -1768,6 +1825,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean onTileVerticalKey(int position, int keyCode) {
         int count = adapter.appCount();
+        if (iconRow) return onRowKey(position, keyCode, count);
         int target;
         // Horizontal: swallow the key at a row's ends so focus never wraps to the next row or
         // escapes up into the top bar. Mid-row moves fall through to the default focus search.
@@ -1805,10 +1863,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         return true;
     }
 
+    /** Keys in the icon row: Left and Right along it (the library pill after the last icon), Up to the top bar, Down stays. */
+    private boolean onRowKey(int position, int keyCode, int count) {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return false;
+        if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return true;
+        boolean forward = rtlAppGrid ? keyCode == KeyEvent.KEYCODE_DPAD_LEFT : keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+        if (forward && position == count - 1 && adapter.isLibraryAt(count)) {
+            focusLibrary();
+            return true;
+        }
+        // One row of count tiles: its ends are the first and the last, so focus never wraps or escapes.
+        return GridNavigation.atHorizontalEdge(position, count, Math.max(1, count), rtlAppGrid,
+                keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
+    }
+
     @Override public void onLibraryFocused() {
         libraryFocusPending = false;
         hideGlass();
         hideHero();
+    }
+
+    @Override public void onLibraryBack() {
+        if (adapter.appCount() > 0) focusTile(adapter.appCount() - 1);
     }
 
     @Override public void onLibraryUp() {
@@ -1903,6 +1979,138 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         grid.addOnScrollListener(pendingFocusScroll);
         grid.smoothScrollToPosition(pos);
+    }
+
+    // ---- date below the clock, weather, the cards under the clock and the icon row ------------------
+
+    /**
+     * show_greeting and date_below_clock: the clock grows to 64sp, the date moves under it written out in full
+     * and the pills stay level with the clock instead of with the bottom of the block.
+     */
+    private void setUpHeader(Config cfg) {
+        if (!cfg.showGreeting) greeting.setVisibility(View.GONE);
+        weatherLine = findViewById(R.id.weatherLine);
+        weatherIcon = findViewById(R.id.weatherIcon);
+        weatherText = findViewById(R.id.weatherText);
+        if (!cfg.dateBelowClock) return;
+        if (shamsi) {
+            findViewById(R.id.date).setVisibility(View.GONE);   // the Shamsi line keeps its place beside the clock
+        } else {
+            findViewById(R.id.dateColumn).setVisibility(View.GONE);
+            findViewById(R.id.clockDivider).setVisibility(View.GONE);
+        }
+        ((TextView) findViewById(R.id.clock)).setTextSize(TypedValue.COMPLEX_UNIT_SP, 64f);
+        findViewById(R.id.dateBelow).setVisibility(View.VISIBLE);
+        View topButtons = findViewById(R.id.topButtons);
+        RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) topButtons.getLayoutParams();
+        lp.removeRule(RelativeLayout.ALIGN_BOTTOM);
+        lp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        lp.topMargin = (int) ((cfg.showGreeting ? 26 : 10) * density);
+        lp.bottomMargin = 0;
+        topButtons.setLayoutParams(lp);
+    }
+
+    /** The cards under the clock and the weather for the line, each only when config asks for it. */
+    private void setUpWidgets(Config cfg) {
+        widgets = findViewById(R.id.widgets);
+        forecastWidget = findViewById(R.id.forecastWidget);
+        calendarWidget = findViewById(R.id.calendarWidget);
+        showCalendar = cfg.calendarWidget;
+        showForecast = cfg.forecastWidget && cfg.weather != null;
+        if (showCalendar) {
+            calendarWidget.update();
+            calendarWidget.setVisibility(View.VISIBLE);
+        }
+        weatherPlace = cfg.weather;
+        if (weatherPlace != null) weather = new WeatherClient(this, weatherPlace, this::showWeather);
+        showWeather(weather == null ? null : weather.current());
+    }
+
+    /** Once a minute and on resume: lets the client ask again when due, and drops an answer that has gone stale. */
+    private void refreshWeather() {
+        if (weather == null) return;
+        weather.update();
+        Weather.Report now = weather.current();
+        if (now != shownWeather) showWeather(now);
+    }
+
+    /** Fills the line under the clock and the week's card, or hides them when there is nothing fresh to show. */
+    private void showWeather(Weather.Report report) {
+        shownWeather = report;
+        boolean any = showCalendar;
+        if (report == null) {
+            weatherLine.setVisibility(View.GONE);
+            forecastWidget.setVisibility(View.GONE);
+        } else {
+            LocalDate today = LocalDate.now();
+            Weather.Day day = report.today(today);
+            String now = getString(R.string.weather_now, Weather.degrees(report.temperature),
+                    getString(ForecastView.wordFor(report.condition())));
+            String range = day == null ? "" : getString(R.string.weather_high, Weather.degrees(day.high)) + " "
+                    + getString(R.string.weather_low, Weather.degrees(day.low));
+            weatherText.setText(Weather.join(weatherPlace.name, now, range));
+            weatherIcon.setImageResource(ForecastView.iconFor(report.icon()));
+            weatherLine.setVisibility(View.VISIBLE);
+            if (showForecast) {
+                forecastWidget.setReport(report, today);
+                forecastWidget.setVisibility(View.VISIBLE);
+                any = true;
+            }
+        }
+        widgets.setVisibility(any ? View.VISIBLE : View.GONE);
+    }
+
+    /** icon_row: the grid becomes one row parked along the bottom, over a dark gradient that keeps the names readable. */
+    private void setUpIconRow() {
+        View scrim = findViewById(R.id.dockScrim);
+        scrim.setBackground(bottomScrim());
+        scrim.setVisibility(View.VISIBLE);
+        // The row is as tall as its tiles: with a fixed size the grid would keep the height it had while empty.
+        grid.setHasFixedSize(false);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) grid.getLayoutParams();
+        lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lp.gravity = Gravity.BOTTOM;
+        grid.setLayoutParams(lp);
+        // No side padding: the tiles' own 10dp holds the glass, and the first icon lines up under the clock.
+        grid.setPadding(0, (int) (14 * density), 0, (int) (16 * density));
+    }
+
+    /** Clear at the top to mostly black at the bottom edge: one small bitmap stretched, like the shelf's scrim. */
+    private Drawable bottomScrim() {
+        int w = 4, h = 64;
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint();
+        paint.setShader(new LinearGradient(0, 0, 0, h, new int[]{0x00000000, 0x66000000, 0xC2000000},
+                new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, w, h, paint);
+        BitmapDrawable scrim = new BitmapDrawable(getResources(), bmp);
+        scrim.setGravity(Gravity.FILL);
+        return scrim;
+    }
+
+    /** The icon row's layout: sideways, mirrored for Hebrew, scrolling just enough to show a tile with its glass. */
+    private RecyclerView.LayoutManager iconRowLayoutManager() {
+        return new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false) {
+            @Override
+            protected boolean isLayoutRTL() {
+                return rtlAppGrid;
+            }
+
+            @Override
+            public boolean requestChildRectangleOnScreen(@NonNull RecyclerView parent, @NonNull View child,
+                                                         @NonNull Rect rect, boolean immediate,
+                                                         boolean focusedChildVisible) {
+                int left = child.getLeft() + rect.left;
+                int right = left + rect.width();
+                int limitLeft = getPaddingLeft(), limitRight = getWidth() - getPaddingRight();
+                int dx = left < limitLeft ? left - limitLeft : right > limitRight ? right - limitRight : 0;
+                if (dx == 0) return false;
+                if (immediate || reducedMotion || !animations) parent.scrollBy(dx, 0);
+                else parent.smoothScrollBy(dx, 0);
+                return true;
+            }
+        };
     }
 
     // ---- top bar ---------------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+{
+  "wallpaper": true,
+  "background_color": "#070C22",
+  "icon_row": true,
+  "date_below_clock": true,
+  "show_greeting": true,
+  "weather": true,
+  "latitude": 52.52,
+  "longitude": 13.405,
+  "weather_location": "Berlin",
+  "weather_units": "celsius",
+  "forecast_widget": true,
+  "calendar_widget": true
+}

@@ -106,6 +106,18 @@ final class Config {
     final boolean cinematicHome;
     /** App shown as a wide card above the dock (featured_app), or empty for none. */
     final String featuredApp;
+    /** icon_row: every app as a square icon with its name in one row along the bottom, dock apps first. */
+    final boolean iconRow;
+    /** date_below_clock: the date on its own line under a larger clock, written out in full. */
+    final boolean dateBelowClock;
+    /** show_greeting: the time-of-day greeting above the clock; false hides it. */
+    final boolean showGreeting;
+    /** Where the TV is, for the weather (latitude and longitude), or null when either is unset. */
+    final Weather.Place weather;
+    /** forecast_widget: the week's weather in a card under the clock (needs {@link #weather}). */
+    final boolean forecastWidget;
+    /** calendar_widget: this month as a card under the clock. */
+    final boolean calendarWidget;
 
     private Config(List<String> dockApps, boolean fillDock, List<String> hiddenApps, String liveTvPackage,
                    String liveTvAction, Map<String, String> launchActions, Map<String, String> appLabels,
@@ -116,7 +128,9 @@ final class Config {
                    int[] settingsKeycodes, boolean settingsKeyPanel, boolean wallpaperEnabled, File wallpaper, List<File> wallpapers,
                    int wallpaperRotationMinutes, int wallpaperDim, boolean overlayApplied,
                    Festival festival, int[] inputKeycodes, List<String> appKeys,
-                   List<RaceWeekend.Race> raceCalendar, boolean cinematicHome, String featuredApp) {
+                   List<RaceWeekend.Race> raceCalendar, boolean cinematicHome, String featuredApp,
+                   boolean iconRow, boolean dateBelowClock, boolean showGreeting, Weather.Place weather,
+                   boolean forecastWidget, boolean calendarWidget) {
         this.inputKeycodes = inputKeycodes;
         this.appKeys = Collections.unmodifiableList(appKeys);
         this.dockApps = Collections.unmodifiableList(dockApps);
@@ -159,6 +173,12 @@ final class Config {
         this.raceCalendar = Collections.unmodifiableList(raceCalendar);
         this.cinematicHome = cinematicHome;
         this.featuredApp = featuredApp;
+        this.iconRow = iconRow;
+        this.dateBelowClock = dateBelowClock;
+        this.showGreeting = showGreeting;
+        this.weather = weather;
+        this.forecastWidget = forecastWidget;
+        this.calendarWidget = calendarWidget;
     }
 
     /** The folder the theme tools push into; null when external storage is unavailable. */
@@ -202,6 +222,16 @@ final class Config {
         int[] inputKeycodes = res.getIntArray(R.array.input_key_keycodes);
         List<String> appKeys = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.app_keys)));
         boolean cinematic = res.getBoolean(R.bool.cinematic_home);
+        boolean iconRow = res.getBoolean(R.bool.icon_row);
+        boolean dateBelowClock = res.getBoolean(R.bool.date_below_clock);
+        boolean showGreeting = res.getBoolean(R.bool.show_greeting);
+        boolean weatherOn = res.getBoolean(R.bool.weather);
+        String latitude = res.getString(R.string.latitude).trim();
+        String longitude = res.getString(R.string.longitude).trim();
+        String weatherLocation = res.getString(R.string.weather_location).trim();
+        String weatherUnits = res.getString(R.string.weather_units).trim();
+        boolean forecastWidget = res.getBoolean(R.bool.forecast_widget);
+        boolean calendarWidget = res.getBoolean(R.bool.calendar_widget);
         boolean applied = false;
 
         File dir = dir(ctx);
@@ -243,7 +273,19 @@ final class Config {
             inputKeycodes = intArray(json, "input_key_keycodes", inputKeycodes);
             appKeys = stringList(json, "app_keys", appKeys);
             cinematic = bool(json, "cinematic_home", cinematic);
+            iconRow = bool(json, "icon_row", iconRow);
+            dateBelowClock = bool(json, "date_below_clock", dateBelowClock);
+            showGreeting = bool(json, "show_greeting", showGreeting);
+            weatherOn = bool(json, "weather", weatherOn);
+            latitude = number(json, "latitude", latitude);
+            longitude = number(json, "longitude", longitude);
+            weatherLocation = string(json, "weather_location", weatherLocation);
+            weatherUnits = string(json, "weather_units", weatherUnits);
+            forecastWidget = bool(json, "forecast_widget", forecastWidget);
+            calendarWidget = bool(json, "calendar_widget", calendarWidget);
         }
+        // The icon row is one plain row: no dock band, no featured card, no empty dock slots.
+        if (iconRow) dockRow = false;
         // A theme push or reset invalidates choices made on the TV. On first use, remember the
         // current theme without clearing choices from an older launcher version.
         SharedPreferences choices = ctx.getSharedPreferences(SETTINGS_NAME, Context.MODE_PRIVATE);
@@ -297,7 +339,9 @@ final class Config {
                 Math.max(0, Math.min(100, skyIntensity)), settingsKeycodes, settingsKeyPanel, wallpaperEnabled, wallpaper,
                 wallpapers, rotationMinutes, wallpaperDim, applied,
                 festival, inputKeycodes, appKeys, json == null ? Collections.emptyList() : raceCalendar(json), cinematic,
-                featured.trim());
+                featured.trim(), iconRow, dateBelowClock, showGreeting,
+                weatherOn ? Weather.Place.parse(latitude, longitude, weatherLocation, weatherUnits) : null,
+                forecastWidget, calendarWidget);
     }
 
     /**
@@ -386,6 +430,13 @@ final class Config {
 
     private static String string(JSONObject o, String key, String fallback) {
         Object v = o.opt(key);
+        return v instanceof String ? ((String) v).trim() : fallback;
+    }
+
+    /** A number written as a number or as a string ("52.52" and 52.52 both count), returned as text; the fallback otherwise. */
+    private static String number(JSONObject o, String key, String fallback) {
+        Object v = o.opt(key);
+        if (v instanceof Number) return v.toString();
         return v instanceof String ? ((String) v).trim() : fallback;
     }
 

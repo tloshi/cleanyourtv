@@ -107,4 +107,24 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+
+    <!-- The date under the clock when date_below_clock is on, written out in full. -->
+    <string name="date_format_below_clock">EEEE, d MMMM yyyy</string>
+    <!-- Weather under the clock (Weather): the conditions Open-Meteo's weather codes map to. -->
+    <string name="wx_clear">Clear</string>
+    <string name="wx_mostly_clear">Mostly clear</string>
+    <string name="wx_partly_cloudy">Partly cloudy</string>
+    <string name="wx_overcast">Overcast</string>
+    <string name="wx_fog">Fog</string>
+    <string name="wx_drizzle">Drizzle</string>
+    <string name="wx_rain">Rain</string>
+    <string name="wx_showers">Showers</string>
+    <string name="wx_snow">Snow</string>
+    <string name="wx_thunderstorm">Thunderstorm</string>
+    <!-- "27° Clear", then today's "H 31°" and "L 21°", joined with dots after the place name. -->
+    <string name="weather_now">%1$s %2$s</string>
+    <string name="weather_high">H %1$s</string>
+    <string name="weather_low">L %1$s</string>
+    <!-- The first column of the week's forecast card; the others are the days' names. -->
+    <string name="forecast_today">Today</string>
 </resources>

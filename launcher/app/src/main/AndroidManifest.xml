@@ -8,6 +8,10 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Only for the weather under the clock (config.xml weather, latitude, longitude): one request to Open-Meteo
+         every half hour while Home is on screen, carrying nothing but the coordinates. Nothing else in the
+         launcher goes online, and nothing does until a theme or config.xml sets a place. See WeatherClient. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with

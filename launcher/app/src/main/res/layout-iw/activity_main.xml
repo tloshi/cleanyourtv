@@ -32,6 +32,16 @@
         android:layout_height="match_parent"
         android:alpha="0" />
 
+    <!-- Icon row (icon_row): a dark gradient up from the bottom edge, so the icons' names read over a wallpaper.
+         Gone otherwise; the gradient is set in code (MainActivity.bottomScrim). -->
+    <View
+        android:id="@+id/dockScrim"
+        android:layout_width="match_parent"
+        android:layout_height="230dp"
+        android:layout_gravity="bottom"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+
     <!-- Race-weekend panel (a theme's race_calendar, see RaceWeekend), mirrored: under the clock on the right. -->
     <LinearLayout
         android:id="@+id/racePanel"
@@ -180,6 +190,7 @@
                 android:gravity="right|bottom">
 
                 <LinearLayout
+                    android:id="@+id/dateColumn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
@@ -218,6 +229,7 @@
                 </LinearLayout>
 
                 <View
+                    android:id="@+id/clockDivider"
                     android:layout_width="1dp"
                     android:layout_height="26dp"
                     android:layout_gravity="bottom"
@@ -275,6 +287,54 @@
                             android:letterSpacing="0.08"
                             android:textAllCaps="true" />
                     </LinearLayout>
+
+                <!-- date_below_clock: the date in full on its own line under the clock, and under it the weather
+                     line (config weather); both gone until config turns them on. -->
+                <TextClock
+                    android:id="@+id/dateBelow"
+                    android:gravity="right"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:format12Hour="@string/date_format_below_clock"
+                    android:format24Hour="@string/date_format_below_clock"
+                    android:textColor="#E6FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/outfit_regular"
+                    android:letterSpacing="0.02"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/weatherLine"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/weatherIcon"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginEnd="8dp"
+                        android:alpha="0.9"
+                        android:contentDescription="@null" />
+
+                    <TextView
+                        android:id="@+id/weatherText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:textColor="#D9FFFFFF"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/outfit_medium"
+                        android:letterSpacing="0.02" />
+                </LinearLayout>
 
                 </LinearLayout>
             </LinearLayout>
@@ -342,6 +402,36 @@
                     android:nextFocusDown="@+id/grid" />
             </LinearLayout>
         </RelativeLayout>
+
+        <!-- Cards under the clock (forecast_widget, calendar_widget): gone unless config turns one on. They take no
+             focus, so every D-pad path is as before. Their height is the taller card's, shared by both. -->
+        <LinearLayout
+            android:id="@+id/widgets"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="22dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:visibility="gone"
+            android:importantForAccessibility="no">
+
+            <com.gathin.tvhome.ForecastView
+                android:id="@+id/forecastWidget"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_bg"
+                android:visibility="gone" />
+
+            <com.gathin.tvhome.MonthView
+                android:id="@+id/calendarWidget"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginStart="16dp"
+                android:background="@drawable/widget_bg"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <!-- The wrapper clips at the grid's edge; the grid itself must not clip so scaled tiles can overflow their cells. -->
         <FrameLayout

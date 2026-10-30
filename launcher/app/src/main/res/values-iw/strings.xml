@@ -103,4 +103,22 @@
     <string name="race_live">%1$s · בשידור חי</string>
     <string name="race_finished">הדגל המשובץ</string>
     <string name="last_opened">נפתח לאחרונה %1$s</string>
+
+    <!-- התאריך מתחת לשעון (date_below_clock), במלואו. -->
+    <string name="date_format_below_clock">EEEE, d MMMM yyyy</string>
+    <!-- מזג האוויר מתחת לשעון (Weather): המצבים שקודי Open-Meteo מתורגמים אליהם. -->
+    <string name="wx_clear">בהיר</string>
+    <string name="wx_mostly_clear">בהיר ברובו</string>
+    <string name="wx_partly_cloudy">מעונן חלקית</string>
+    <string name="wx_overcast">מעונן</string>
+    <string name="wx_fog">ערפל</string>
+    <string name="wx_drizzle">טפטוף</string>
+    <string name="wx_rain">גשם</string>
+    <string name="wx_showers">ממטרים</string>
+    <string name="wx_snow">שלג</string>
+    <string name="wx_thunderstorm">סופת רעמים</string>
+    <string name="weather_now">%1$s %2$s</string>
+    <string name="weather_high">מקס׳ %1$s</string>
+    <string name="weather_low">מינ׳ %1$s</string>
+    <string name="forecast_today">היום</string>
 </resources>

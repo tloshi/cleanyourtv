@@ -56,6 +56,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onLibraryRequested();
         void onLibraryFocused();
         void onLibraryUp();
+        /** Icon row: Left (Right in Hebrew) from the library pill, back onto the last icon. */
+        void onLibraryBack();
     }
 
     static final class Entry {
@@ -71,6 +73,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String name;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
+        /** The icon row's square tile (IconArt), made the first time the tile is bound. */
+        Drawable art;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
             this(APP, label, component, banner, icon, null, 0);
@@ -91,6 +95,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     static final float FOCUS_SCALE = 1.10f;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
+    /** The icon row (icon_row): the square tile's side (item_app_icon.xml), its corners as a share of it, and the
+     *  name's alpha under a tile that is not focused. */
+    static final float ICON_TILE_DP = 64f, ICON_CORNER = 0.25f, ICON_NAME_REST_ALPHA = 0.72f;
 
     /**
      * Tile width for a grid of this inner width: the cell minus room for the focus zoom and the glass
@@ -175,6 +182,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final boolean dockRow;
     /** cinematic_home: only then does a launch record the last-opened app the shelf uses. */
     private final boolean cinematic;
+    /** icon_row: square icons with their names in one row, no banners (dockRow is false with it). */
+    private final boolean iconRow;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
     private final List<String> favourites;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
@@ -213,6 +222,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.dockTitle = cfg.dockTitle;
         this.dockRow = cfg.dockRow;
         this.cinematic = cfg.cinematicHome;
+        this.iconRow = cfg.iconRow;
         this.launchActions = cfg.launchActions;
         this.appLabels = cfg.appLabels;
         this.appBanners = cfg.appBanners;
@@ -347,16 +357,33 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         if (viewType == 1) {
             View row = LayoutInflater.from(ctx).inflate(R.layout.row_app_library, parent, false);
+            if (iconRow) {
+                // One item after the last icon, not a footer as wide as the row.
+                ViewGroup.LayoutParams lp = row.getLayoutParams();
+                lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+                row.setLayoutParams(lp);
+            }
             View button = row.findViewById(R.id.btnLibrary);
             button.setOnClickListener(v -> listener.onLibraryRequested());
             button.setOnFocusChangeListener((v, focused) -> { if (focused) listener.onLibraryFocused(); });
             button.setOnKeyListener((v, key, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (iconRow) {
+                    // Along the row, back lands on the last icon; Up is left to the focus search, which finds the top bar.
+                    boolean rtl = ctx.getResources().getBoolean(R.bool.rtl_app_grid);
+                    if (key == (rtl ? KeyEvent.KEYCODE_DPAD_RIGHT : KeyEvent.KEYCODE_DPAD_LEFT)) listener.onLibraryBack();
+                    return key != KeyEvent.KEYCODE_DPAD_UP;
+                }
                 if (key == KeyEvent.KEYCODE_DPAD_UP) listener.onLibraryUp();
                 return key == KeyEvent.KEYCODE_DPAD_UP || key == KeyEvent.KEYCODE_DPAD_DOWN
                         || key == KeyEvent.KEYCODE_DPAD_LEFT || key == KeyEvent.KEYCODE_DPAD_RIGHT;
             });
             return new RecyclerView.ViewHolder(row) { };
+        }
+        if (iconRow) {
+            // Fixed sizes from the layout: 64dp squares with the name under each, however many apps there are.
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_app_icon, parent, false);
+            return new Holder(v, listener, animations, advancedEffects, reducedMotion, true);
         }
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_app, parent, false);
         float density = parent.getResources().getDisplayMetrics().density;
@@ -379,7 +406,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
         name.setLayoutParams(nameLp);
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion);
+        return new Holder(v, listener, animations, advancedEffects, reducedMotion, false);
     }
 
     @Override
@@ -403,14 +430,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.name.setText(e.name);
         h.name.setVisibility(dockRow && position < dockSize ? View.INVISIBLE : View.VISIBLE);   // the dock has no labels
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
-        h.name.setAlpha(focused ? 1f : 0f);
+        h.name.setAlpha(focused ? 1f : h.nameRestAlpha);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
         h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
-        if (e.banner != null) {
+        if (iconRow) {
+            h.icon.setImageDrawable(squareIcon(e));
+            h.icon.setVisibility(View.VISIBLE);
+        } else if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
             h.icon.setVisibility(View.GONE);
@@ -436,6 +466,21 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
+    /** The icon row's tile for an entry, made once from its icon (or its banner, for an app with no icon). */
+    private Drawable squareIcon(Entry e) {
+        if (e.art == null) {
+            int size = Math.round(ICON_TILE_DP * ctx.getResources().getDisplayMetrics().density);
+            e.art = IconArt.square(ctx.getResources(), e.icon != null ? e.icon : e.banner, size);
+        }
+        return e.art;
+    }
+
+    /** Corner radius of a tile this wide: a quarter of the side in the icon row, 16dp at the design width otherwise. */
+    float cornerRadiusPx(int tileWidthPx) {
+        return iconRow ? tileWidthPx * ICON_CORNER
+                : cornerRadius(tileWidthPx, ctx.getResources().getDisplayMetrics().density);
+    }
+
     private void launch(Entry e) {
         if (e.kind == Entry.HOME_SETTINGS) {
             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
@@ -645,8 +690,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final boolean advancedEffects;
         final boolean reducedMotion;
 
+        /** The icon row: a square tile with its name always under it, dimmed until focused, and rounder corners. */
+        final boolean iconMode;
+        /** The name's alpha while the tile is not focused: hidden in the grid, dimmed in the icon row. */
+        final float nameRestAlpha;
+
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion) {
+               boolean reducedMotion, boolean iconMode) {
             super(v);
             card = v.findViewById(R.id.card);
             banner = v.findViewById(R.id.banner);
@@ -656,13 +706,16 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             this.animations = animations;
             this.advancedEffects = advancedEffects;
             this.reducedMotion = reducedMotion;
+            this.iconMode = iconMode;
+            nameRestAlpha = iconMode ? ICON_NAME_REST_ALPHA : 0f;
 
             final float density = v.getResources().getDisplayMetrics().density;
             card.setOutlineProvider(new ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, Outline outline) {
                     // 16dp at the design width, scaled down with the tile so small tiles keep the same shape.
-                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), cornerRadius(view.getWidth(), density));
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(),
+                            iconMode ? view.getWidth() * ICON_CORNER : cornerRadius(view.getWidth(), density));
                 }
             });
             card.setClipToOutline(true);
@@ -688,7 +741,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     view.setTranslationZ(0f);
                     banner.setScaleX(1f);
                     banner.setScaleY(1f);
-                    name.setAlpha(focused ? 1f : 0f);
+                    name.setAlpha(focused ? 1f : nameRestAlpha);
                     name.setTranslationY(0f);
                 } else if (reducedMotion) {
                     view.animate().scaleX(s).scaleY(s)
@@ -697,11 +750,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             .setDuration(focused ? 120 : 80)
                             .setInterpolator(new DecelerateInterpolator())
                             .withLayer().start();
-                    name.animate().alpha(focused ? 1f : 0f).setDuration(100).start();
+                    name.animate().alpha(focused ? 1f : nameRestAlpha).setDuration(100).start();
                     // Same place as the full motion's slide ends: the layout's -6dp is only its starting point, and
                     // left there the name overlaps the zoomed tile.
                     // Only on focus: snapping it back to -6dp while it fades out would jump it up over the tile.
-                    if (focused) name.setTranslationY(density * 4f);
+                    if (focused && !iconMode) name.setTranslationY(density * 4f);
                 } else {
                     view.animate().scaleX(s).scaleY(s)
                             .translationY(focused && advancedEffects ? -4f * density : 0f)
@@ -713,8 +766,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         banner.animate().scaleX(focused ? 1.035f : 1f).scaleY(focused ? 1.035f : 1f)
                                 .setDuration(280).start();
                     }
-                    name.animate().alpha(focused ? 1f : 0f)
-                            .translationY(focused ? density * 4f : -density * 6f)
+                    // The icon row's name stays put and only brightens; the grid's slides in under the zoomed tile.
+                    name.animate().alpha(focused ? 1f : nameRestAlpha)
+                            .translationY(iconMode ? 0f : focused ? density * 4f : -density * 6f)
                             .setDuration(220).start();
                 }
                 int pos = getBindingAdapterPosition();
