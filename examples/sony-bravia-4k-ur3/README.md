@@ -173,6 +173,43 @@ app; `cmd package compile --reset <package>` undoes it), which takes the just-in
 The theme also sets `reduced_motion`: a stiff focus spring with no bounce, short fades and no replay of the tile
 entrance, on top of the TV's own animations at 0.5x.
 
+## A second UR3: the parents' TV
+
+Same model, so the same list, the same launcher build and a theme of its own in
+[`theme-parents/`](theme-parents/config.json), a copy of this one. Before pushing it, put their town in
+`weather_latitude`, `weather_longitude` and `weather_location`, and the apps they use first in `dock_apps` (an app
+that is not installed is skipped). On their TV: Settings → Device Preferences → About → press OK on **Build** seven
+times → back → Developer options → **USB debugging** on, and accept "Allow USB debugging?" when the first command
+below reaches it. From the repository folder on the PC, with `<tv ip>` from the TV's Settings → Network:
+
+1. Record the TV as it is, so everything can be undone in one go:
+
+   ```powershell
+   tools\venv\Scripts\python.exe -I tools\snapshot.py --save <backup folder>
+   ```
+
+2. Apply the list (it records its own undo first):
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt
+   ```
+
+3. Build and install the launcher, make it Home, and push their theme:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File launcher\build-and-install.ps1 -TvHost <tv ip>
+   ```
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\theme-parents
+   ```
+
+4. Ads in every app and quicker starts, the two commands from the section above with their address: Private DNS to
+   AdGuard DNS, and `cmd package compile -m speed -f <package>` for the apps they use.
+
+5. Check it: press Home on their remote, open an app, come back. The undo of everything is the snapshot's
+   `<backup folder>\RESTORE.ps1`, of the list alone `tools\restore.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt`.
+
 ## Things worth knowing
 
 - **After a Sony firmware update**, an updated system app can come back enabled. Check with
