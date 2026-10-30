@@ -6,7 +6,7 @@
 # Everything is DISABLED, not uninstalled. Comment out any line you want to keep.
 #
 # Launcher, layout, step-by-step log and the state before and after: README.md, LOG.md, state-*.txt
-# in this folder; install.ps1 builds and installs the launcher with theme/.
+# in this folder; launcher\build-and-install.ps1 then tools\theme.ps1 (see README.md) builds and installs the launcher with theme/.
 # Same firmware build as the UR2 list. USB debugging alone opens port 5555, no pairing.
 # Stock launcher: com.google.android.tvlauncher. Only it and Settings' FallbackHome answer HOME;
 # setupwraith does not, and the saved Wi-Fi network belongs to android.uid.system.

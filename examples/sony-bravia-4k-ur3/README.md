@@ -1,10 +1,10 @@
 # Sony BRAVIA 4K UR3: what was done, and how to undo or change it
 
-Done on 2026-10-20 over network ADB (TV at `192.168.178.26`, Ethernet). Every command below is
-PowerShell, run from the repository folder `C:\Users\taula\projects\tloshi\cleanyourtv`.
+Done on 2026-10-20 over network ADB (TV at `<tv ip>`, Ethernet). Every command below is
+PowerShell, run from the repository folder `<repository folder>`.
 
 Every step in order, with its result: [`LOG.md`](LOG.md). Every package before and after:
-[`state-before.txt`](state-before.txt), [`state-after.txt`](state-after.txt).
+[`state-before.log`](state-before.log), [`state-after.log`](state-after.log).
 
 ## What changed
 
@@ -18,7 +18,7 @@ Every step in order, with its result: [`LOG.md`](LOG.md). Every package before a
   Player (USB), Screen mirroring, Spotify and MX Player the row under it.
   Since 30 October 2026 the theme uses the dusk look (`themes/README.md`): a drawn dusk wallpaper, every app
   as a square icon in one row along the bottom with SmartTube first, the date written out under a large clock,
-  the weather for Berlin under that (change `latitude`, `longitude` and `weather_location` in
+  the weather for Berlin under that (change `weather_latitude`, `weather_longitude` and `weather_location` in
   [`theme/config.json`](theme/config.json) to your town), and the week's forecast and this month's calendar as
   two cards under the clock.
 - **Screen mirroring for a Samsung's Smart View is switched on**: Sony's Miracast receiver is enabled
@@ -43,11 +43,11 @@ removed). This replays the full snapshot in `backup\2026-10-20-bravia-ur3-before
 on this PC; keep a copy of that folder somewhere safe:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File backup\2026-10-20-bravia-ur3-before\RESTORE.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File <backup folder>\RESTORE.ps1 -DryRun
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File backup\2026-10-20-bravia-ur3-before\RESTORE.ps1
+powershell -ExecutionPolicy Bypass -File <backup folder>\RESTORE.ps1
 ```
 
 The first command only lists what would change; the second does it and ends with "the TV matches the
@@ -56,22 +56,22 @@ to normal speed. It does not bring back the 15 uninstalled apps (it lists them a
 ones you want from the Play Store, or from the copies in `backup\apks\` while that folder exists:
 
 ```powershell
-adb -s 192.168.178.26:5555 install-multiple (Get-ChildItem backup\apks\org.xbmc.kodi\*.apk).FullName
+adb -s <tv ip>:5555 install-multiple (Get-ChildItem backup\apks\org.xbmc.kodi\*.apk).FullName
 ```
 
 Kodi's old settings and add-ons are in `backup\kodi-data\`; after reinstalling Kodi, before opening
-it: `adb -s 192.168.178.26:5555 push backup\kodi-data\org.xbmc.kodi /sdcard/Android/data/`.
+it: `adb -s <tv ip>:5555 push backup\kodi-data\org.xbmc.kodi /sdcard/Android/data/`.
 
 Only the animation speed back to normal, nothing else:
 
 ```powershell
-foreach ($key in 'window_animation_scale', 'transition_animation_scale', 'animator_duration_scale') { adb -s 192.168.178.26:5555 shell settings put global $key 1 }
+foreach ($key in 'window_animation_scale', 'transition_animation_scale', 'animator_duration_scale') { adb -s <tv ip>:5555 shell settings put global $key 1 }
 ```
 
-**Undo only the debloat list** (second route, from the record in `C:\Users\taula\.cleanyourtv\`):
+**Undo only the debloat list** (second route, from the record in `<user folder>\.cleanyourtv\`):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt
+powershell -ExecutionPolicy Bypass -File tools\restore.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt
 ```
 
 ## Re-enable one app
@@ -82,11 +82,11 @@ system apps > pick the app > Enable.
 **Over ADB**, with USB debugging on:
 
 ```powershell
-adb connect 192.168.178.26:5555
+adb connect <tv ip>:5555
 ```
 
 ```powershell
-adb -s 192.168.178.26:5555 shell pm enable com.google.android.youtube.tv
+adb -s <tv ip>:5555 shell pm enable com.google.android.youtube.tv
 ```
 
 Feature you want back, and the packages to enable:
@@ -109,7 +109,7 @@ Feature you want back, and the packages to enable:
 This is Miracast over Wi-Fi Direct, a direct link between phone and TV, so it needs the TV's Wi-Fi
 radio on even though the TV is on Ethernet; that radio being off is why the phone never found the TV
 before. If someone switches Wi-Fi off in the TV's settings, Smart View loses the TV again; switch it
-back on there, or `adb -s 192.168.178.26:5555 shell svc wifi enable`.
+back on there, or `adb -s <tv ip>:5555 shell svc wifi enable`.
 
 For videos and photos in Google Photos, the **Cast** icon in the app sends them to the TV's built-in
 Chromecast instead, over the normal network, with no TV screen to open first.
@@ -119,14 +119,14 @@ Chromecast instead, over the normal network, with no TV screen to open first.
 The layout lives in [`theme\config.json`](theme/config.json). Edit it, then push it; no rebuild needed:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\theme
+powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\theme
 ```
 
 - **`featured_app`**: the app on the big card at the top (SmartTube). Another package name swaps it;
   remove the line for no card.
 - **`dock_apps`**: the order of the first tiles. The first `columns` entries sit in the dock band (row 1),
   the rest start row 2 in the same order; every other app follows alphabetically. Package names of the
-  apps on the TV: `adb -s 192.168.178.26:5555 shell pm list packages -3` (apps you installed).
+  apps on the TV: `adb -s <tv ip>:5555 shell pm list packages -3` (apps you installed).
 - **`columns`**: tiles per row (4 to 7 is comfortable; tiles shrink from 5 up).
 - **`rows_below_dock`**: grid rows visible on Home under the dock (0 to 3).
 - **`hidden_apps`**: tiles never shown (the app stays installed). Recordings, Timers, Vewd and Sony
@@ -135,24 +135,47 @@ powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost 192.168.178.26 
   `wallpaper.jpg`, add `"wallpaper": true` to `config.json`, and push the theme again. Remove the file
   (or set `false`) and push to go back to black.
 
-Back to the launcher's built-in defaults: `tools\theme.ps1 -TvHost 192.168.178.26 -Reset`. On the TV,
+Back to the launcher's built-in defaults: `tools\theme.ps1 -TvHost <tv ip> -Reset`. On the TV,
 holding OK on the Settings pill opens Launcher settings (apps per row, animations).
 
 ## Reinstall or update the launcher
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File examples\sony-bravia-4k-ur3\install.ps1
+powershell -ExecutionPolicy Bypass -File launcher\build-and-install.ps1 -TvHost <tv ip>
 ```
 
-It builds the launcher (needs the JDK and Android SDK that are on this PC), installs it, keeps it as
-Home and pushes this theme.
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\theme.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\theme
+```
+
+The first builds the launcher (needs the JDK and Android SDK that are on this PC), installs it and keeps
+it as Home; the second pushes this theme.
+
+## Ads in every app, and quick motion (30 October 2026)
+
+The TV's **Private DNS** points at AdGuard DNS (`dns.adguard-dns.com`, DNS over TLS), which answers ad and tracker
+domains with nothing, for every app at once. It cannot touch ads served from the same place as the content
+(YouTube's in-stream ads, an app's own promos); SmartTube covers YouTube. Set over ADB, and undone the same way:
+
+```powershell
+adb -s <tv ip>:5555 shell settings put global private_dns_mode hostname
+adb -s <tv ip>:5555 shell settings put global private_dns_specifier dns.adguard-dns.com
+```
+
+```powershell
+adb -s <tv ip>:5555 shell settings delete global private_dns_mode
+adb -s <tv ip>:5555 shell settings delete global private_dns_specifier
+```
+
+The theme also sets `reduced_motion`: a stiff focus spring with no bounce, short fades and no replay of the tile
+entrance, on top of the TV's own animations at 0.5x.
 
 ## Things worth knowing
 
 - **After a Sony firmware update**, an updated system app can come back enabled. Check with
-  `adb -s 192.168.178.26:5555 shell pm list packages -d` (35 lines: 31 from the list, 3 that Sony ships
+  `adb -s <tv ip>:5555 shell pm list packages -d` (35 lines: 31 from the list, 3 that Sony ships
   disabled, and the stock launcher) and re-apply the list with
-  `powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost 192.168.178.26 examples\sony-bravia-4k-ur3\debloat.txt`.
+  `powershell -ExecutionPolicy Bypass -File tools\disable.ps1 -TvHost <tv ip> examples\sony-bravia-4k-ur3\debloat.txt`.
 - **Inputs**: the pill lists HDMI 1 to 4 and AV; a device that announces itself over HDMI-CEC is named
   in its port's row (PlayStation 5 · HDMI 1). The remote's Input button still opens Sony's own panel.
 - **No ad-blocking DNS** was set: Android's Private DNS has no fallback, so a resolver outage shows as

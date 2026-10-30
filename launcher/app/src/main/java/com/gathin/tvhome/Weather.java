@@ -8,7 +8,7 @@ import java.util.Locale;
 
 /**
  * The weather under the clock and in the week's forecast card, for the place in config ({@code weather},
- * {@code latitude}, {@code longitude}), from Open-Meteo (https://open-meteo.com: free, no key, no account).
+ * {@code weather_latitude}, {@code weather_longitude}), from Open-Meteo (https://open-meteo.com: free, no key, no account).
  * Everything here is data and maths with no Android types: the WMO weather codes the API answers with, the
  * conditions and icons they map to, the degrees as written, and how long an answer stays good. It is tested
  * on the JVM; {@link WeatherClient} does the one request and keeps the last answer on the TV.

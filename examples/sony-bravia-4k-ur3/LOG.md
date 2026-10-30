@@ -1,11 +1,11 @@
 # Sony BRAVIA 4K UR3: what was done, in order
 
 2026-10-20, local time. Done by the owner with Claude Code from a Windows 11 PC on the same network,
-over network ADB to `192.168.178.26:5555` (USB debugging was already on; the TV is on Ethernet).
+over network ADB to `<tv ip>:5555` (USB debugging was already on; the TV is on Ethernet).
 Tools: platform-tools adb 1.0.41, the repository's `tools/`, Temurin JDK 21, Gradle 8.9.
 
-The TV before and after, package by package: [`state-before.txt`](state-before.txt),
-[`state-after.txt`](state-after.txt). Screens: [`screenshot-before.png`](screenshot-before.png),
+The TV before and after, package by package: [`state-before.log`](state-before.log),
+[`state-after.log`](state-after.log). Screens: [`screenshot-before.png`](screenshot-before.png),
 [`screenshot-after.png`](screenshot-after.png). How to undo or change anything: [`README.md`](README.md).
 
 ## Connect and back up (nothing changed yet)
@@ -13,11 +13,11 @@ The TV before and after, package by package: [`state-before.txt`](state-before.t
 | Time | Step | Result |
 |---|---|---|
 | 09:10 | Found the TV in the ARP table (port 5555 open), `adb connect`, owner accepted "Allow USB debugging?" | BRAVIA 4K UR3 (BRAVIA_UR3_EU), Android TV 10, firmware QTG3.200305.006.S97 662301, MediaTek mt5893, 2.3 GB RAM, `ro.adb.secure=1` |
-| 09:13 | Full snapshot: `tools/snapshot.py --save backup/2026-10-20-bravia-ur3-before` | 228 packages (4 disabled at the factory), Home `com.google.android.tvlauncher/.MainActivity`, 299 settings, getprop, input list. Kept locally only: it holds the TV's serial and android_id |
-| 09:14 | `RESTORE.ps1 -DryRun` | 0 changes to undo |
-| 09:16 | Undo proof: disabled `tv.samba.ssm`, ran `RESTORE.ps1` | Re-enabled, "the TV matches the snapshot", stock home unchanged |
+| 09:13 | Full snapshot: `tools/venv/bin/python -I tools/snapshot.py --save backup/2026-10-20-bravia-ur3-before` | 228 packages (4 disabled at the factory), Home `com.google.android.tvlauncher/.MainActivity`, 299 settings, getprop, input list. Kept locally only: it holds the TV's serial and android_id |
+| 09:14 | `<backup folder>\RESTORE.ps1 -DryRun` | 0 changes to undo |
+| 09:16 | Undo proof: disabled `tv.samba.ssm`, ran `<backup folder>\RESTORE.ps1` | Re-enabled, "the TV matches the snapshot", stock home unchanged |
 | 09:20 | Checked who answers HOME and who owns the network | Only `tvlauncher` and Settings' `FallbackHome`; network owned by `android.uid.system` (setupwraith does not claim Home here) |
-| 09:25 | Second undo route: `tools/recovery.py --save examples/sony-bravia-4k-ur3/debloat.txt` | Record in `~/.cleanyourtv/`; all 33 listed packages were enabled before |
+| 09:25 | Second undo route: `tools/venv/bin/python -I tools/recovery.py --save examples/sony-bravia-4k-ur3/debloat.txt` | Record in `~/.cleanyourtv/`; all 33 listed packages were enabled before |
 
 ## Debloat: 33 packages, `pm disable-user --user 0`, one per call, screenshot after each batch
 
@@ -41,14 +41,14 @@ Media Player and Sony Music stay enabled because DLNA plays through them.
 | Time | Step | Result |
 |---|---|---|
 | 09:32 | Built the launcher (`gradlew assembleRelease`; Gradle installed build-tools 34 itself) | 335 KB APK |
-| 09:33 | `launcher\build-and-install.ps1 -TvHost 192.168.178.26` | Installed (md5 match), set as Home, started, then `com.google.android.tvlauncher` disabled; Home resolves to `com.gathin.tvhome/.MainActivity` |
+| 09:33 | `launcher\build-and-the install script -TvHost <tv ip>` | Installed (md5 match), set as Home, started, then `com.google.android.tvlauncher` disabled; Home resolves to `com.gathin.tvhome/.MainActivity` |
 | 09:33 | Pushed `theme/` with `tools\theme.ps1` | Dock SmartTube, Prime Video, MagentaTV, Disney+; Right, Down and Up checked with key presses |
 | 09:34 | Inputs menu | The PlayStation 5 was listed twice: its HDMI-CEC input (`HDMI100004`) and its port HDMI 1 (`HW2`) |
 | 09:37 | Launcher fix: an HDMI-CEC device is folded into its port's row (`InputPorts`, 4 unit tests; all 75 launcher tests and lint pass), reinstalled | One row, "HDMI 1 · PlayStation 5"; selecting it opened a session on `HDMI100004` |
 | 09:38 | Live TV row | Sent a passthrough URI for the satellite tuner; Sony's TV app opened on the last input instead. The owner has no antenna, cable or satellite, so the row was removed (`"live_tv_package": ""`) |
 | 09:53 | Layout for how the TV is used (owner: SmartTube for the kids, Netflix, PlayStation, Smart IPTV, films from USB) | 5 columns; row 1 SmartTube, Netflix, Prime Video, Apple TV, Disney+; row 2 Smart IPTV, Media Player, MagentaTV; Recordings, Timers, Vewd and Sony Music hidden |
 | 09:54 | Reboot check | Uptime 82 s: Home is the launcher, 38 packages disabled (33 + 4 factory + stock launcher) |
-| 10:05 | `examples\sony-bravia-4k-ur3\install.ps1` end to end | Build, install, Home kept, theme pushed |
+| 10:05 | `launcher\build-and-the install script` and `tools\theme.ps1` end to end | Build, install, Home kept, theme pushed |
 
 Not done, on the owner's decision: ad-blocking Private DNS (Android has no fallback, so a resolver
 outage would show as "No internet").
@@ -79,17 +79,26 @@ barely moved: the apps that ran in the background were the ones the owner kept.
 | 13:58 | Owner: delete the backups of the removed apps | `backup/apks` (420 MB) and `backup/kodi-data` (73 MB) deleted; the full snapshot stays |
 | 14:00 | Why a Samsung's Smart View never found the TV | Smart View uses Miracast over Wi-Fi Direct, which needs the Wi-Fi radio; the TV is on Ethernet and had Wi-Fi off (`wifi_on=0`, P2P disabled). Sony's receiver was also off: `screnmirroring.com` since before this session, `com.mediatek.wfd` and `com.sony.dtv.networkapp.wifidirect` from batch 5 |
 | 14:01 | `pm enable` those three, `svc wifi enable` | Wi-Fi on, default network still Ethernet; Sony's Screen mirroring screen opens and shows "Device name: L Tv", P2P listening. The two packages left `debloat.txt` |
-| 14:02 | Launcher: `featured_app`, one app on a wide card above the dock (`FeaturedCard`, 6 unit tests; all 81 launcher tests and lint pass), installed with `install.ps1` | SmartTube card on top, Home opens on it; dock Netflix, Prime Video, Apple TV, Disney+, MagentaTV; row 2 Smart IPTV, Media Player, Screen mirroring, Spotify, MX Player |
+| 14:02 | Launcher: `featured_app`, one app on a wide card above the dock (`FeaturedCard`, 6 unit tests; all 81 launcher tests and lint pass), installed with the install script (two commands now, see the README) | SmartTube card on top, Home opens on it; dock Netflix, Prime Video, Apple TV, Disney+, MagentaTV; row 2 Smart IPTV, Media Player, Screen mirroring, Spotify, MX Player |
 | 14:03 | Navigation, read from the UI tree after each key | Down from the card to the dock, Up back to the card and Down to the same dock tile, Up to Inputs and Down to the card, Left/Right stay, rows one at a time; scrolled to row 3 the card slides up with the dock and clips; OK opens SmartTube, Home returns to the card |
-| 14:10 | Live state read again | 35 packages disabled (31 from the list, 3 Sony ships disabled, the stock launcher); `wifi_on` 1. `state-after.txt` rewritten |
+| 14:10 | Live state read again | 35 packages disabled (31 from the list, 3 Sony ships disabled, the stock launcher); `wifi_on` 1. `state-after.log` rewritten |
 
-`RESTORE.ps1` puts `screnmirroring.com` back to disabled (that is how the TV was) but leaves the
+`<backup folder>\RESTORE.ps1` puts `screnmirroring.com` back to disabled (that is how the TV was) but leaves the
 Wi-Fi radio on; `adb shell svc wifi disable` or the TV's network settings switch it off.
 
 ## Open when this was written
 
 - The first Smart View connection from the owner's Samsung (the TV side is ready and waiting).
 - Close network ADB: on the TV, Developer options > USB debugging off and revoke USB debugging
-  authorisations, reboot; then `Test-NetConnection 192.168.178.26 -Port 5555` must fail. Not done yet.
+  authorisations, reboot; then `Test-NetConnection <tv ip> -Port 5555` must fail. Not done yet.
 - Checks only the real remote and devices can prove: the mic button, a film from a USB drive in Media
   Player, AirPlay from an iPhone, casting from a phone.
+
+## 30 October 2026, from the Mac
+
+| Time | Step | Result |
+|---|---|---|
+| 16:33 | Launcher 2.4 with the dusk look (`themes/README.md`): the package had to be replaced, the TV's copy was signed by the PC's debug key | Installed, Home kept; theme pushed with SmartTube first in the icon row |
+| 16:50 | `reduced_motion` on in the theme | Pushed |
+| 16:51 | Private DNS: `private_dns_mode hostname`, `private_dns_specifier dns.adguard-dns.com` (both were unset before) | Validated; `ad.doubleclick.net` resolves to nothing, `example.com` and `api.open-meteo.com` still resolve |
+| 17:05 | Launcher 3.2 (upstream merged) with the same theme, and a featured-card theme as a check | Both shown; the first two screenshots of the card theme came back white with the launcher alive and laid out, six later ones were fine |
