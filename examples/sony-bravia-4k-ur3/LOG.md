@@ -106,4 +106,4 @@ Wi-Fi radio on; `adb shell svc wifi disable` or the TV's network settings switch
 | 17:35 | Memory: 2.3 GB, 150 MB free, the 100 MB zram full; the biggest residents after SmartTube are Google services, the Vewd engine behind the HbbTV red button (three processes, about 340 MB), voice search, Bravia Sync and Spotify Connect, all kept on purpose | Nothing disabled |
 | 17:40 | `cmd package compile -m speed -f` for SmartTube, Netflix, Prime Video, Apple TV, Disney+, MagentaTV, Smart IPTV, Spotify, MX Player and Gboard (ahead-of-time compiled, 5 minutes) | Success for all ten; undo with `cmd package compile --reset <package>` |
 | 17:50 | Launcher: the icon row renders its tiles in the background right after the app list loads, so the first scroll along the row no longer stops to draw icons | First scroll after a theme push: 118 frames, 2 janky (was 8 of 37), 48 ms at the 99th percentile (was 117) |
-
+| 18:04 | The modern look instead of the dusk one: `themes/modern` (mesh-gradient wallpaper from `tools/modern_wallpaper.py`, `glass_style: rim`), flat cards in the launcher | Pushed; the parents' theme follows it |

@@ -25,7 +25,7 @@
   "rows_below_dock": 1,
   "reduced_motion": true,
   "wallpaper": true,
-  "background_color": "#070C22",
+  "background_color": "#0A0C12",
   "icon_row": true,
   "large_clock": true,
   "show_greeting": true,
@@ -38,5 +38,6 @@
   "calendar_widget": true,
   "app_labels": [
     "de.telekom.magentatv.tv=MagentaTV"
-  ]
+  ],
+  "glass_style": "rim"
 }

@@ -16,8 +16,9 @@ Every step in order, with its result: [`LOG.md`](LOG.md). Every package before a
   (`com.google.android.tvlauncher`) is disabled. SmartTube sits on a wide card at the top and Home
   opens on it; Netflix, Prime Video, Apple TV, Disney+ and MagentaTV are the dock; Smart IPTV, Media
   Player (USB), Screen mirroring, Spotify and MX Player the row under it.
-  Since 30 October 2026 the theme uses the dusk look (`themes/README.md`): a drawn dusk wallpaper, every app
-  as a square icon in one row along the bottom with SmartTube first, the date written out under a large clock,
+  Since 30 October 2026 the theme uses the modern look (`themes/modern`, see `themes/README.md`): a dark mesh
+  gradient drawn from code, a white ring as the focus, every app as a square icon in one row along the bottom with
+  SmartTube first, the date written out under a large clock,
   the weather for Berlin under that (change `weather_latitude`, `weather_longitude` and `weather_location` in
   [`theme/config.json`](theme/config.json) to your town), and the week's forecast and this month's calendar as
   two cards under the clock.

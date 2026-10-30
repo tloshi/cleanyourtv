@@ -206,6 +206,7 @@ tools/theme.sh themes/aurora                                 # push a theme; --r
 | [`tools/trace.py`](tools/trace.py), [`trace_report.py`](tools/trace_report.py) | Records Perfetto traces of the launcher (return to Home, cold start, D-pad) and reports where its time goes, per run and before against after. Optional: needs [`requirements-perf.txt`](tools/requirements-perf.txt). [Guide](tools/trace.md). |
 | [`tools/flamechart.py`](tools/flamechart.py) | Draws a before/after flame chart from those traces, for a pull request: one lane per thread on a shared time scale, the work a change targets in magenta with its total. Optional, like the trace tools. [Guide](tools/flamechart.md). |
 | [`tools/screendiff.py`](tools/screendiff.py) | Compares a before and an after screenshot pixel by pixel, leaving out the clock or anything you mask, and writes the pair with your Wi-Fi name blurred. Optional, like the trace tools. [Guide](tools/screendiff.md). |
+| [`tools/modern_wallpaper.py`](tools/modern_wallpaper.py) | Draws the modern theme's wallpaper from code: a dark mesh gradient, three soft colour blooms on near-black. |
 | [`tools/dusk_wallpaper.py`](tools/dusk_wallpaper.py) | Draws the dusk theme's wallpaper from code (a sky after sunset, a crescent moon, hills and one tree), so the picture carries no licence but the repository's. |
 | [`tools/race_calendar.py`](tools/race_calendar.py) | Writes this season's F1 calendar into a theme for race-weekend mode, from the free Jolpica API. |
 | [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Builds a shrunk release (about 595 KB), installs it, switches Home, and rolls back if Home does not land on it. |
@@ -280,7 +281,7 @@ set is in [Troubleshooting](docs/TROUBLESHOOTING.md).
 |---|---|
 | **Configure** | Dock order, hidden apps, Live TV app, 4 to 7 tiles per row, reduced motion. All in [`config.xml`](launcher/app/src/main/res/values/config.xml) |
 | **Settings on the TV** | Hold OK on Settings for launcher settings. Optional `launcher_settings_button` makes a normal click open them directly; TV settings remain on the settings page and their app tile. |
-| **Themes** | Background, wallpaper and layout from a `config.json` pushed over Wi-Fi, no rebuild. fifteen ship in [`themes/`](themes/), the built-in `default/` included |
+| **Themes** | Background, wallpaper and layout from a `config.json` pushed over Wi-Fi, no rebuild. sixteen ship in [`themes/`](themes/), the built-in `default/` included |
 | **31 languages** | Follows the TV's language, with a fully mirrored right-to-left layout for Hebrew |
 | **App library** | Optional: browse every installed app and add or remove Home shortcuts. See [the app library guide](docs/app-library.md) |
 | **Tile menu** | Optional (`tile_menu`): hold OK on a tile for Move, Remove from Home and App info. Off, holding OK opens App info |

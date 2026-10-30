@@ -1,0 +1,15 @@
+{
+  "wallpaper": true,
+  "background_color": "#0A0C12",
+  "glass_style": "rim",
+  "icon_row": true,
+  "large_clock": true,
+  "show_greeting": true,
+  "weather": true,
+  "weather_latitude": "52.52",
+  "weather_longitude": "13.405",
+  "weather_location": "Berlin",
+  "weather_units": "celsius",
+  "forecast_widget": true,
+  "calendar_widget": true
+}
