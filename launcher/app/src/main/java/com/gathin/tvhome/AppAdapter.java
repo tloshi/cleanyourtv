@@ -42,6 +42,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * App tiles. The first {@link MainActivity#COLUMNS} positions are the pinned dock (favourites, fixed order,
@@ -199,6 +201,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final boolean cinematic;
     /** icon_row: square icons with their names in one row, no banners (dockRow is false with it). */
     private final boolean iconRow;
+    /** icon_row: draws the tiles that are not on screen yet, so a scroll never renders one on the UI thread. */
+    private final ExecutorService tileArtist = Executors.newSingleThreadExecutor();
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
     private final List<String> favourites;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
@@ -359,6 +363,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         items.clear();
         items.addAll(fresh);
         notifyDataSetChanged();
+        if (iconRow) {
+            // The visible tiles bind at once; the rest get their art in the background (about 16 KB each), so
+            // the first scroll along the row does not stop to render icons. A tile bound first does its own.
+            final List<Entry> all = new ArrayList<>(fresh);
+            tileArtist.execute(() -> {
+                for (Entry e : all) squareIcon(e);
+            });
+        }
     }
 
     /** icon_tiles: the app's icon centred on a dark banner-shaped tile, for apps whose own banner crops badly. */
@@ -570,11 +582,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
     /** The icon row's tile for an entry, made once from its icon (or its banner, for an app with no icon). */
     private Drawable squareIcon(Entry e) {
-        if (e.art == null) {
-            int size = Math.round(ICON_TILE_DP * ctx.getResources().getDisplayMetrics().density);
-            e.art = IconArt.square(ctx.getResources(), e.icon != null ? e.icon : e.banner, size);
+        synchronized (e) {   // the UI thread and tileArtist can meet on the same entry; one of them draws it
+            if (e.art == null) {
+                int size = Math.round(ICON_TILE_DP * ctx.getResources().getDisplayMetrics().density);
+                e.art = IconArt.square(ctx.getResources(), e.icon != null ? e.icon : e.banner, size);
+            }
+            return e.art;
         }
-        return e.art;
     }
 
     /** Corner radius of a tile this wide: a quarter of the side in the icon row, 16dp at the design width otherwise. */

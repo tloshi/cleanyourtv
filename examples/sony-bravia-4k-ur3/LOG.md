@@ -102,3 +102,8 @@ Wi-Fi radio on; `adb shell svc wifi disable` or the TV's network settings switch
 | 16:50 | `reduced_motion` on in the theme | Pushed |
 | 16:51 | Private DNS: `private_dns_mode hostname`, `private_dns_specifier dns.adguard-dns.com` (both were unset before) | Validated; `ad.doubleclick.net` resolves to nothing, `example.com` and `api.open-meteo.com` still resolve |
 | 17:05 | Launcher 3.2 (upstream merged) with the same theme, and a featured-card theme as a check | Both shown; the first two screenshots of the card theme came back white with the launcher alive and laid out, six later ones were fine |
+| 17:30 | Responsiveness: the launcher measured with `dumpsys gfxinfo com.gathin.tvhome` over 16 focus moves after a cold start | 80 frames, 0 janky, 5 ms median, 11 ms at the 99th percentile; 54 MB resident, 0% idle CPU, 0.6 s warm start, 1.2 s from a dead process |
+| 17:35 | Memory: 2.3 GB, 150 MB free, the 100 MB zram full; the biggest residents after SmartTube are Google services, the Vewd engine behind the HbbTV red button (three processes, about 340 MB), voice search, Bravia Sync and Spotify Connect, all kept on purpose | Nothing disabled |
+| 17:40 | `cmd package compile -m speed -f` for SmartTube, Netflix, Prime Video, Apple TV, Disney+, MagentaTV, Smart IPTV, Spotify, MX Player and Gboard (ahead-of-time compiled, 5 minutes) | Success for all ten; undo with `cmd package compile --reset <package>` |
+| 17:50 | Launcher: the icon row renders its tiles in the background right after the app list loads, so the first scroll along the row no longer stops to draw icons | First scroll after a theme push: 118 frames, 2 janky (was 8 of 37), 48 ms at the 99th percentile (was 117) |
+

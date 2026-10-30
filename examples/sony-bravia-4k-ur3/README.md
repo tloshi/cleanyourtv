@@ -167,6 +167,9 @@ adb -s <tv ip>:5555 shell settings delete global private_dns_mode
 adb -s <tv ip>:5555 shell settings delete global private_dns_specifier
 ```
 
+The apps in daily use are compiled ahead of time (`cmd package compile -m speed -f <package>` over ADB, one per
+app; `cmd package compile --reset <package>` undoes it), which takes the just-in-time compiler out of their starts.
+
 The theme also sets `reduced_motion`: a stiff focus spring with no bounce, short fades and no replay of the tile
 entrance, on top of the TV's own animations at 0.5x.
 
